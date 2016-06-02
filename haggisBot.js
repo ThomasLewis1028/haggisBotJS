@@ -1,10 +1,9 @@
 /*Variable area*/
-var PropertiesReader = require('properties-reader');
-var properties = PropertiesReader('/home/thomas/discordBot/haggisBotJS/haggisBotProperties.ini');
+var properties = require('/home/thomas/discordBot/haggisBotJS/haggisBotProperties.json');
 
 var Discordbot = require('discord.io');
 var bot = new Discordbot({
-	token: properties.get('bot.token'),
+	token: properties.token,
 	autorun: true
 });
 
@@ -12,28 +11,33 @@ var Cleverbot = require('cleverbot-node');
 cleverbot = new Cleverbot;
 
 var fs = require('fs');
-var haggisBotPath = properties.get('bot.haggisBotPath');
-var musicBotPath = properties.get('bot.musicBotPath');
-var haggisID = '87603525680398336';
-var botfartID = '168202209098596353';	
-var pcmrServer = '77710284621357056';
-var cleverBotChannel = '185784251906523136';
-var musicReqChannel = '183436587609227264';
-var featureReqChannel = '174630285797752832';
+var haggisBotPath = properties.haggisBotPath;
+var musicBotPath = properties.musicBotPath;
+var haggisID = properties.haggisID;
+var botfartID = properties.botfartID;	
+var pcmrServer = properties.pcmrServer;
+var cleverBotChannel = properties.cleverBotChannel;
+var musicReqChannel = properties.musicReqChannel;
+var featureReqChannel = properties.featureReqChannel;
 
 /*Event area*/
 	bot.on("ready", function(rawEvent) {
-		console.log("Connected!");
-		console.log("Logged in as: ");
-		console.log(bot.username + " - (" + bot.id + ")");
-		console.log(bot.internals.version);
-		console.log("----------")
-		
-		bot.editUserInfo({
-			avatar: fs.readFileSync(haggisBotPath+ '/Haggis.jpg', 'base64')
-		});
-		
-		sendMessages(haggisID, ["Reconnected at "+getDateTime()]);
+		try{
+			console.log("Connected!");
+			console.log("Logged in as: ");
+			console.log(bot.username + " - (" + bot.id + ")");
+			console.log(bot.internals.version);
+			console.log("----------")
+			
+			bot.editUserInfo({
+				avatar: fs.readFileSync(haggisBotPath+ '/Haggis.jpg', 'base64')
+			});
+			
+			sendMessages(haggisID, ["Reconnected at "+getDateTime()]);
+		}catch(err){
+			sendMessages(haggisID, ["ERROR: "+err]);
+			logError(getDateTime(), err);
+		}
 	});
 
 	Cleverbot.prepare(function(){
@@ -173,7 +177,7 @@ var featureReqChannel = '174630285797752832';
 			
 			//###PING PONG###
 			if(/\bping\b/i.test(message)){
-				sendMessages(channelID, ["pong - "+haggisID]);
+				sendMessages(channelID, ["pong"]);
 			}
 			
 			//###REDDIT & SEARCH###
