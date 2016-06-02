@@ -39,266 +39,259 @@ var featureReqChannel = '174630285797752832';
 	Cleverbot.prepare(function(){
 	});
 
-try{
 	bot.on("message", function(user, userID, channelID, message, rawEvent) {
-		if(channelID in bot.directMessages){
-			//don't do shit
-		}else{
-			var serverID = bot.channels[channelID].guild_id;
-		}
-		
-		var mentions = rawEvent.d.mentions;
-		var messageArray = message.split(" ");
-
-		if(serverID == pcmrServer){
-			for (var key in mentions) {
-				if (mentions[key].id === haggisID && userID != haggisID) {
-					return sendMessages(haggisID, [user+" pinged you with \""+message+"\""]);
-				}
+		try{
+			if(channelID in bot.directMessages){
+				//don't do shit
+			}else{
+				var serverID = bot.channels[channelID].guild_id;
 			}
 			
-			for(i=0; i<messageArray.length; i++){
-				if(/\bHaggis\b/i.test(messageArray[i]) && userID != haggisID){
-					sendMessages(haggisID, [user+" pinged you with \""+message+"\""]);
-				}
-			}
-		
-			return;
-		}else if(userID === botfartID){
-			logChat(channelID, userID, user, getDateTime(), message);
-			return;
-		}else if(serverID != pcmrServer){
-			logChat(channelID, userID, user, getDateTime(), message);
-		}
-		
-		switch(messageArray[0]){
-			//###REGULAR COMMANDS###
-			case "!rollsr":
-				sendMessages(channelID, [rollDiceSR(messageArray[1])])
-				break;
-			case "!roll":
-				sendMessages(channelID, [rollDiceSum(messageArray[1], messageArray[2])])
-				break;
-			case "!card":
-				sendMessages(channelID, [pickACard()])
-				break;
-			case "!flipacoin":
-			case "!coinflip":
-				sendMessages(channelID, [flipACoin()])
-				break;
-			case "!commands":
-				sendMessages(channelID, ["```\n" + 
-					"!roll <X> <dY> \n" + 
-					"!rollsr <X> d6 \n" + 
-					"!card \n" + 
-					"!coinflip \n" + 
-					"!flipacoin \n" + 
-					"!musiccommands \n" +
-					"/r/<subreddit \n" +
-					"/r/<subreddit <search query> \n" +
-					"lmgtfy <search query> \n" +
-					"ping \n" +
-					
-					"```"])
-				break;
-			case "!musiccommands":
-				sendMessages(channelID, ["```\n" + 
-					"!play <song link> \n" +
-					"!play <song text to search for \n" +
-					"!queue - current queue\n" +
-					"!np - now playing \n" +
-					"!skip \n" +
-					"!search [service] [number] <query> \n" +
-					"!clear \n" +
-					"!pause \n" +
-					"!resume \n" +
-					"```"])
-				break;
-				
-			//###SECRET COMMANDS###
-			case "!lenny":
-				sendFiles(channelID, [haggisBotPath+"lenny.png"]); 
-				break;
-			case "!fliparealcoin":
-				sendFiles (channelID, [flipARealCoin()]);
-				break;
-			case "kill":
-				if(messageArray[1] === "yourself"){
-				}else{
-					break;
-				}
-			case "kys":
-			case "killyourself":
-				sendMessages(channelID, ["https://youtu.be/2dbR2JZmlWo"]);
-				break;
-			case "!dickbutt":
-				sendFiles (channelID, [richardKiester()]);
-				break;
-			case "slammin":
-			case "SLAMMIN":
-				sendMessages(channelID, ["https://youtu.be/kencI_SLNxw"]);
-				break;
-			case "wow!":
-				sendFiles(channelID, [haggisBotPath+"wow.gif"]);
-				break;
-			case "!faggot":
-				sendFiles(channelID, [qubeyPitts()]);
-				break;
-			case "y":
-				sendFiles(channelID, [haggisBotPath+"ytho.jpg"]);
-				break;
-			case "!superreallyincrediblysecretcommands":
-				sendMessages(channelID, ["```\n" + 
-					"kys \n" + 
-					"kill yourself \n" + 
-					"killyourself \n" + 
-					"!lenny \n" + 
-					"!fliparealcoin \n" + 
-					"!realcoinflip \n" +
-					"!flipthebird \n" +
-					"!dickbutt \n" +
-					"slammin \n" + 
-					"SLAMMIN \n" +
-					"kysLenny \n" +
-					"me irl \n" +
-					"meirl \n" +
-					"me_irl \n" +
-					"wow! \n" +
-					"!faggot \n" +
-					"y \n" +
-					"```"])
-				break;
-			
-		}
-		
-		//###PING PONG###
-		if(/\bping\b/i.test(message)){
-			sendMessages(channelID, ["pong - "+haggisID]);
-		}
-		
-		//###REDDIT & SEARCH###
-		if(/\b\/r\//.test(messageArray[0])){
-			var redditURL = "https://www.reddit.com";
+			var mentions = rawEvent.d.mentions;
 			var messageArray = message.split(" ");
-			
-			if (messageArray.length == 1){
-				redditURL = redditURL.concat(message);
-				sendMessages(channelID, [redditURL]);
-			}else if(messageArray.length > 1){
-				redditURL = redditURL.concat(messageArray[0]);
-				redditURL = redditURL.concat("/search?q=");
-				
-				for(i = 1; i < messageArray.length; i++){
-					redditURL = redditURL.concat(messageArray[i]);
-					
-					if(i != messageArray.length - 1){
-						redditURL = redditURL.concat("+");
+
+			if(serverID == pcmrServer){
+				for (var key in mentions) {
+					if (mentions[key].id === haggisID && userID != haggisID) {
+						return sendMessages(haggisID, [user+" pinged you with \""+message+"\""]);
 					}
 				}
 				
-				redditURL = redditURL.concat("&restrict_sr=on&sort=relevance&t=all");
-				sendMessages(channelID, [redditURL]);
-			}
-		}
-		
-		//###MUSIC AUTOPLAY LIST###
-		if(channelID == musicReqChannel && userID != botfartID){
-			var youtubeLink = "www.youtube.com/";
-			var youtubeShortLink = "https://youtu.be/";
+				for(i=0; i<messageArray.length; i++){
+					if(/\bHaggis\b/i.test(messageArray[i]) && userID != haggisID){
+						sendMessages(haggisID, [user+" pinged you with \""+message+"\""]);
+					}
+				}
 			
-			if(message.indexOf(youtubeLink) > -1){
-				var newArr = message.split("=");
-				var newLink = youtubeShortLink.concat(newArr[1]);
-				
-				sendMessages(channelID, [addMusic(newLink, user)]);
-			}else if(message.indexOf(youtubeShortLink) > -1){
-				sendMessages(channelID, [addMusic(message, user)]);
-			}else{
-				sendMessages(channelID, ["Please use a YouTube link"]);
+				return;
+			}else if(userID === botfartID){
+				logChat(channelID, userID, user, getDateTime(), message);
+				return;
+			}else if(serverID != pcmrServer){
+				logChat(channelID, userID, user, getDateTime(), message);
 			}
-		}
-		
-		//###LET ME GOOGLE THAT FOR YOU###
-		if(messageArray[0] == "lmgtfy"){
-			var lmgtfyLink = "http://lmgtfy.com/?q=";
-			var lmgtfy = "";
 			
-			for(i = 1; i < messageArray.length; i++){
-				lmgtfy = lmgtfy.concat(messageArray[i]);
+			switch(messageArray[0]){
+				//###REGULAR COMMANDS###
+				case "!rollsr":
+					sendMessages(channelID, [rollDiceSR(messageArray[1])])
+					break;
+				case "!roll":
+					sendMessages(channelID, [rollDiceSum(messageArray[1], messageArray[2])])
+					break;
+				case "!card":
+					sendMessages(channelID, [pickACard()])
+					break;
+				case "!flipacoin":
+				case "!coinflip":
+					sendMessages(channelID, [flipACoin()])
+					break;
+				case "!commands":
+					sendMessages(channelID, ["```\n" + 
+						"!roll <X> <dY> \n" + 
+						"!rollsr <X> d6 \n" + 
+						"!card \n" + 
+						"!coinflip \n" + 
+						"!flipacoin \n" + 
+						"!musiccommands \n" +
+						"/r/<subreddit \n" +
+						"/r/<subreddit <search query> \n" +
+						"lmgtfy <search query> \n" +
+						"ping \n" +
+						
+						"```"])
+					break;
+				case "!musiccommands":
+					sendMessages(channelID, ["```\n" + 
+						"!play <song link> \n" +
+						"!play <song text to search for \n" +
+						"!queue - current queue\n" +
+						"!np - now playing \n" +
+						"!skip \n" +
+						"!search [service] [number] <query> \n" +
+						"!clear \n" +
+						"!pause \n" +
+						"!resume \n" +
+						"```"])
+					break;
+					
+				//###SECRET COMMANDS###
+				case "!lenny":
+					sendFiles(channelID, [haggisBotPath+"lenny.png"]); 
+					break;
+				case "!fliparealcoin":
+					sendFiles (channelID, [flipARealCoin()]);
+					break;
+				case "kill":
+					if(messageArray[1] === "yourself"){
+					}else{
+						break;
+					}
+				case "kys":
+				case "killyourself":
+					sendMessages(channelID, ["https://youtu.be/2dbR2JZmlWo"]);
+					break;
+				case "!dickbutt":
+					sendFiles (channelID, [richardKiester()]);
+					break;
+				case "slammin":
+				case "SLAMMIN":
+					sendMessages(channelID, ["https://youtu.be/kencI_SLNxw"]);
+					break;
+				case "wow!":
+					sendFiles(channelID, [haggisBotPath+"wow.gif"]);
+					break;
+				case "!faggot":
+					sendFiles(channelID, [qubeyPitts()]);
+					break;
+				case "y":
+					sendFiles(channelID, [haggisBotPath+"ytho.jpg"]);
+					break;
+				case "!superreallyincrediblysecretcommands":
+					sendMessages(channelID, ["```\n" + 
+						"kys \n" + 
+						"kill yourself \n" + 
+						"killyourself \n" + 
+						"!lenny \n" + 
+						"!fliparealcoin \n" + 
+						"!realcoinflip \n" +
+						"!flipthebird \n" +
+						"!dickbutt \n" +
+						"slammin \n" + 
+						"SLAMMIN \n" +
+						"kysLenny \n" +
+						"me irl \n" +
+						"meirl \n" +
+						"me_irl \n" +
+						"wow! \n" +
+						"!faggot \n" +
+						"y \n" +
+						"```"])
+					break;
 				
-				if(i != messageArray.length - 1){
-					lmgtfy = lmgtfy.concat("+");
+			}
+			
+			//###PING PONG###
+			if(/\bping\b/i.test(message)){
+				sendMessages(channelID, ["pong - "+haggisID]);
+			}
+			
+			//###REDDIT & SEARCH###
+			if(/^\/r\//i.test(messageArray[0])){
+				var redditURL = "https://www.reddit.com";
+				
+				if (messageArray.length == 1){
+					redditURL = redditURL.concat(message);
+					sendMessages(channelID, [redditURL]);
+				}else if(messageArray.length > 1){
+					redditURL = redditURL.concat(messageArray[0]);
+					redditURL = redditURL.concat("/search?q=");
+					
+					for(i = 1; i < messageArray.length; i++){
+						redditURL = redditURL.concat(messageArray[i]);
+						
+						if(i != messageArray.length - 1){
+							redditURL = redditURL.concat("+");
+						}
+					}
+					
+					redditURL = redditURL.concat("&restrict_sr=on&sort=relevance&t=all");
+					sendMessages(channelID, [redditURL]);
 				}
 			}
 			
-			lmgtfy = lmgtfyLink.concat(lmgtfy);
-			
-			sendMessages(channelID, [lmgtfy]);
-		}
-		
-		//###CLEVERBOTFART###
-		if(channelID == cleverBotChannel && userID != botfartID){		
-			cleverbot.write(message, function(response, err){
-				if(err){
-					console.log(err);
+			//###MUSIC AUTOPLAY LIST###
+			if(channelID == musicReqChannel && userID != botfartID){
+				var youtubeLink = "www.youtube.com/";
+				var youtubeShortLink = "https://youtu.be/";
+				
+				if(message.indexOf(youtubeLink) > -1){
+					var newArr = message.split("=");
+					var newLink = youtubeShortLink.concat(newArr[1]);
+					
+					sendMessages(channelID, [addMusic(newLink, user)]);
+				}else if(message.indexOf(youtubeShortLink) > -1){
+					sendMessages(channelID, [addMusic(message, user)]);
+				}else{
+					sendMessages(channelID, ["Please use a YouTube link"]);
 				}
-				sendMessages(channelID, [response.message]);
-			});
-		}
-		
-		//###I WON'T LIE###
-		if(messageArray[0] == "I" && messageArray[1] == "won't"){
-			if(messageArray[2] == "lie" || messageArray[2] == "lie,"){
-				sendMessages(channelID, [":ok_hand: :joy::sob: :laughing::ok_hand: :eggplant: :100: :poop: "]);
-			}
-		}
-		
-		//###NO HOMO
-		for(i = 0; i < messageArray.length; i++){
-			if(/\bgay\b/i.test(messageArray[i])){
-				sendMessages(channelID, ["no homo"]);
-				break;
-			}
-		}
-		
-		//###ME IRL M2THX###
-		for(i = 0; i < messageArray.length; i++){
-			if(/\bme\b/i.test(messageArray[i]) && /\birl\b/i.test(messageArray[i+1])){
-				sendMessages(channelID, ["m2thx"]);
-			}else if(/\bme_irl\b/i.test(messageArray[i])){
-				sendMessages(channelID, ["m2thx"]);
-			}else if(/\bmeirl\b/i.test(messageArray[i])){
-				sendMessages(channelID, ["m2thx"]);
-			}
-		}
-		
-		//###AYY LMAO###
-		if(/\bay[y]+\b/i.test(messageArray[0]) && messageArray.length<2){
-			var ysInMessage = message.match(/y/gi).length-2;
-			var lmaoString = "lmao"
-			
-			for(i=0; i<ysInMessage; i++){
-				lmaoString = lmaoString.concat("o");
 			}
 			
-			sendMessages(channelID, [lmaoString]);
-		}
-		
-		//###FEATURE REQUESTS###
-		if(userID != haggisID && channelID == featureReqChannel){
-			var yesOrNo = Math.floor((Math.random() * 25) + 1);
-			
-			if(yesOrNo % 7 == 0){
-				sendMessages(channelID, ["Maybe"]);
-			}else{
-				sendMessages(channelID, ["No"]);
+			//###LET ME GOOGLE THAT FOR YOU###
+			if(messageArray[0] == "lmgtfy"){
+				var lmgtfyLink = "http://lmgtfy.com/?q=";
+				var lmgtfy = "";
+				
+				for(i = 1; i < messageArray.length; i++){
+					lmgtfy = lmgtfy.concat(messageArray[i]);
+					
+					if(i != messageArray.length - 1){
+						lmgtfy = lmgtfy.concat("+");
+					}
+				}
+				
+				lmgtfy = lmgtfyLink.concat(lmgtfy);
+				
+				sendMessages(channelID, [lmgtfy]);
 			}
-		}
-	});
-}catch(err){
-	logError(getDateTime(), err);
-	sendMessages(haggisID, ["ERROR: "+err]);
-}
+			
+			//###CLEVERBOTFART###
+			if(channelID == cleverBotChannel && userID != botfartID){		
+				cleverbot.write(message, function(response, err){
+					if(err){
+						console.log(err);
+					}
+					sendMessages(channelID, [response.message]);
+				});
+			}
+			
+			//###I WON'T LIE###
+			if(messageArray[0] == "I" && messageArray[1] == "won't"){
+				if(messageArray[2] == "lie" || messageArray[2] == "lie,"){
+					sendMessages(channelID, [":ok_hand: :joy::sob: :laughing::ok_hand: :eggplant: :100: :poop: "]);
+				}
+			}
+			
+			//###NO HOMO
+			for(i = 0; i < messageArray.length; i++){
+				if(/\bgay\b/i.test(messageArray[i])){
+					sendMessages(channelID, ["no homo"]);
+					break;
+				}
+			}
+			
+			//###ME IRL M2THX###
+			if(/(me).{0,1}(irl)/i.test(message)){
+				sendMessages(channelID, ["m2thx"]);
+			}
+			
+			//###AYY LMAO###
+			if(/\bay[y]+\b/i.test(messageArray[0]) && messageArray.length<2){
+				var ysInMessage = message.match(/y/gi).length-2;
+				var lmaoString = "lmao"
+				
+				for(i=0; i<ysInMessage; i++){
+					lmaoString = lmaoString.concat("o");
+				}
+				
+				sendMessages(channelID, [lmaoString]);
+			}
+			
+			//###FEATURE REQUESTS###
+			if(userID != haggisID && channelID == featureReqChannel){
+				var yesOrNo = Math.floor((Math.random() * 25) + 1);
+				
+				if(yesOrNo % 7 == 0){
+					sendMessages(channelID, ["Maybe"]);
+				}else{
+					sendMessages(channelID, ["No"]);
+				}
+			}
+	}catch(err){
+		sendMessages(haggisID, ["ERROR: "+err]);
+		logError(getDateTime(), err);
+	}
+});
 
 //###AUTO RECONNECT###
 bot.on("disconnected", function() {
@@ -606,109 +599,37 @@ function addMusic(link, name){
 //###QUINNLAN###
 function qubeyPitts(){
 	var qFolder = haggisBotPath+"Quinnlan/";
-	var imageID = Math.floor((Math.random() * 32) + 1);
+    var files = fs.readdirSync(qFolder);
 	
-	switch(imageID){
-		case 1:
-			return qFolder+"QandJule.jpg";
-		case 2:
-			return qFolder+"QBunny.png";
-		case 3:
-			return qFolder+"QCloseup.jpg";
-		case 4:
-			return qFolder+"QCloseup2.png";
-		case 5:
-			return qFolder+"QCostume.jpg";
-		case 6:
-			return qFolder+"QCrawl.jpg";
-		case 7:
-			return qFolder+"QDapper.jpg";
-		case 8:
-			return qFolder+"QDickShot.jpg";
-		case 9:
-			return qFolder+"QDream.jpeg.jpg";
-		case 10:
-			return qFolder+"QDressup.jpg";
-		case 11:
-			return qFolder+"QFace.jpg";
-		case 12:
-			return qFolder+"QFez.jpg";
-		case 13:
-			return qFolder+"QFisheye.jpg";
-		case 14:
-			return qFolder+"QGasm.jpg";
-		case 15:
-			return qFolder+"QGlasses.jpg"
-		case 16:
-			return qFolder+"QGuards.jpg";
-		case 17:
-			return qFolder+"QHair.jpg";
-		case 18:
-			return qFolder+"QCrawl.jpg";
-		case 19:
-			return qFolder+"QInLove.jpg";
-		case 20:
-			return qFolder+"QKitty.jpg";
-		case 21:
-			return qFolder+"QMajestic.jpg";
-		case 22:
-			return qFolder+"QMask.jpg";
-		case 23:
-			return qFolder+"QMoses.jpg";
-		case 24:
-			return qFolder+"QPotter.jpg";
-		case 25:
-			return qFolder+"QSexy.jpg";
-		case 26:
-			return qFolder+"QTerror.jpg";
-		case 27:
-			return qFolder+"QTerror2.jpg";
-		case 28:
-			return qFolder+"QTiara.jpg";
-		case 29:
-			return qFolder+"QTiara2.jpg";
-		case 30:
-			return qFolder+"Qube.jpg";
-		case 31:
-			return qFolder+"QUnderShot.jpg";
-		case 32:
-			return qFolder+"QWho.jpg";
-	}
+	fileList = [];
+
+    for(var i in files){
+        if (!files.hasOwnProperty(i)) continue;
+        var name = qFolder+'/'+files[i];
+        if (!fs.statSync(name).isDirectory()){
+            fileList.push(name);
+        }
+    }
+	
+	var imageID = Math.floor((Math.random() * fileList.length) + 1);
+	return fileList[imageID];
 }
 
 //###DICKBUTT###
 function richardKiester(){
 	var dickbuttFolder = haggisBotPath+"DickButt/"
-	var imageID = Math.floor((Math.random() * 14) + 1);
+	var files = fs.readdirSync(dickbuttFolder);
 	
-	switch(imageID){
-		case 1:
-			return dickbuttFolder+"cuteDickbutt.jpg";
-		case 2:
-			return dickbuttFolder+"DickButt.jpg";
-		case 3:
-			return dickbuttFolder+"dickbutt4Pres.jpg";
-		case 4:
-			return dickbuttFolder+"dickbuttGrinch.gif";
-		case 5:
-			return dickbuttFolder+"dickbuttSeason.gif";
-		case 6:
-			return dickbuttFolder+"horrifyingDickbutt.jpg";
-		case 7:
-			return dickbuttFolder+"ogDickbutt.jpg";
-		case 8:
-			return dickbuttFolder+"ogDickButtNoText.jpg";
-		case 9:
-			return dickbuttFolder+"pepeDickbutt.jpg";
-		case 10:
-			return dickbuttFolder+"richardKiester.png";
-		case 11:
-			return dickbuttFolder+"spaceDickbutt.jpg";
-		case 12:
-			return dickbuttFolder+"spinningDickbutt.gif";
-		case 13:
-			return dickbuttFolder+"strongDickbutt.png";
-		case 14:
-			return dickbuttFolder+"walkingDickbutt.gif";
-	}
+	fileList = [];
+
+    for(var i in files){
+        if (!files.hasOwnProperty(i)) continue;
+        var name = dickbuttFolder+'/'+files[i];
+        if (!fs.statSync(name).isDirectory()){
+            fileList.push(name);
+        }
+    }
+	
+	var imageID = Math.floor((Math.random() * fileList.length) + 1);
+	return fileList[imageID];
 }
