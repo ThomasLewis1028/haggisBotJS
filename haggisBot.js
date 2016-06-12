@@ -181,7 +181,7 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 
 		//###PING PONG###
 		if (/\bping\b/i.test(message)) {
-			sendMessages(channelID, ["pong"]);
+			sendMessages(channelID, [user+" pong"]);
 		}
 
 		//##ADMIN CALL###
