@@ -1,4 +1,3 @@
-/*Variable area*/
 var properties = require('/home/thomas/discordBot/haggisBotJS/haggisBotProperties.json');
 
 var Discordbot = require('discord.io');
@@ -18,11 +17,13 @@ var botfartID = properties.botfartID;
 var popcheeseID = properties.popcheeseID;
 var modRole = properties.modRole;
 var pcmrServer = properties.pcmrServer;
+var pcmrSteamServer = properties.pcmrSteamServer;
 var cleverBotChannel = properties.cleverBotChannel;
 var musicReqChannel = properties.musicReqChannel;
 var featureReqChannel = properties.featureReqChannel;
+var autoplaylist = properties.autoplaylist;
+var musicBlacklist = properties.musicBlacklist;
 
-/*Event area*/
 bot.on("ready", function (rawEvent) {
 	try {
 		console.log("Connected!");
@@ -48,7 +49,7 @@ Cleverbot.prepare(function () {
 bot.on("message", function (user, userID, channelID, message, rawEvent) {
 	try {
 		if (channelID in bot.directMessages) {
-			//don't do shit
+			//do nothing, no idea how to not have this here
 		} else {
 			var serverID = bot.channels[channelID].guild_id;
 			var server = bot.servers[serverID];
@@ -58,27 +59,32 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 		var mentions = rawEvent.d.mentions;
 		var messageArray = message.split(" ");
 
-		if (serverID == pcmrServer) {
-			for (var key in mentions) {
-				if (mentions[key].id === haggisID && userID != haggisID) {
-					return sendMessages(haggisID, [user + " pinged you with \"" + message + "\""]);
-				}
+		//###FIND MENTIONS###
+		for (var key in mentions) {
+			if (mentions[key].id === haggisID && userID != haggisID) {
+				return sendMessages(haggisID, [user + " pinged you with \"" + message + "\""]);
 			}
+		}
 
-			for (i = 0; i < messageArray.length; i++) {
-				if (/\bHaggis\b/i.test(messageArray[i]) && userID != haggisID) {
-					sendMessages(haggisID, [user + " pinged you with \"" + message + "\""]);
-				}
+		//###FIND NAME###
+		for (i = 0; i < messageArray.length; i++) {
+			if (/^Haggis$/i.test(messageArray[i]) && userID != haggisID) {
+				sendMessages(haggisID, [getDateTime() + "\n" + user + " pinged you with \"" + message + "\""]);
+			} else if (/^thomas$/i.test(messageArray[i]) && userID != haggisID) {
+				sendMessages(haggisID, [getDateTime() + "\n" + user + " pinged you with \"" + message + "\""]);
 			}
+		}
 
+		if (serverID == pcmrServer || serverID == pcmrSteamServer) {
 			return;
 		} else if (userID === botfartID) {
 			logChat(channelID, userID, user, getDateTime(), message);
 			return;
-		} else if (serverID != pcmrServer) {
+		} else if (serverID != pcmrServer || serverID != pcmrSteamServer) {
 			logChat(channelID, userID, user, getDateTime(), message);
 		}
 
+		//###SWITCH COMMANDS###
 		switch (messageArray[0]) {
 			//###REGULAR COMMANDS###
 			case "!rollsr":
@@ -106,7 +112,6 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 					"/r/<subreddit <search query> \n" +
 					"lmgtfy <search query> \n" +
 					"ping \n" +
-
 					"```"]);
 				break;
 			case "!musiccommands":
@@ -174,18 +179,25 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 					"wow! \n" +
 					"!faggot \n" +
 					"y \n" +
+					"!adminCommands \n" +
 					"```"])
+				break;
+			case "!adminCommands":
+				sendMessages(channelID, ["```\n" +
+					"!b @<user> \n" +
+					"!k @<user> \n" +
+					"```"]);
 				break;
 
 		}
 
 		//###PING PONG###
-		if (/\bping\b/i.test(message)) {
-			sendMessages(channelID, ["<@"+userID+"> pong"]);
+		if (/^ping$/i.test(message)) {
+			sendMessages(channelID, ["<@" + userID + "> pong"]);
 		}
 
 		//##ADMIN CALL###
-		if (/^~[bk]$/i.test(messageArray[0]) && userID == popcheeseID || userID == haggisID) {
+		if (userID == popcheeseID || userID == haggisID && /^![bk]$/i.test(messageArray[0])) {
 			adminCommands(user, messageArray, channelID);
 		}
 
@@ -423,12 +435,12 @@ function adminCommands(user, messageArray, channelID) {
 	if (/^<@\S+>$/.test(messageArray[1])) {
 		userToActUpon = /\d+/.exec(messageArray[1]);
 
-		if (messageArray[0] == "~k") {
+		if (messageArray[0] == "!k") {
 			bot.kick({
 				channel: channelID,
 				target: userToActUpon
 			})
-		} else if (messageArray[0] == "~b") {
+		} else if (messageArray[0] == "!b") {
 			bot.ban({
 				channel: channelID,
 				target: userToActUpon
@@ -586,9 +598,6 @@ function flipARealCoin() {
 }
 
 //###ADD MUSIC###
-var autoplaylist = musicBotPath + "config/autoplaylist.txt";
-var musicBlacklist = musicBotPath + "config/musicBlacklist.txt";
-
 function addMusic(link, name) {
 	var autoplaylistContent = fs.readFileSync(autoplaylist, encoding = 'utf8');
 	var autoplaylistArray = autoplaylistContent.split("\r\n");
