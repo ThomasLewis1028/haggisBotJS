@@ -320,9 +320,7 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 
 //###AUTO RECONNECT###
 bot.on("disconnected", function () {
-	console.log("Bot disconnected");
 	bot.connect(); //Auto reconnect
-	logError(getDateTime(), "Bot Disconnected");
 });
 
 //###FUNCTION DELCARATION AREA###
