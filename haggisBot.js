@@ -159,6 +159,10 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 			case "!faggot":
 				sendFiles(channelID, [qubeyPitts()]);
 				break;
+			case "9/11":
+				sendMessages(channelID, ["Did you know Steve Buscemi was a volunteer firefighter at 9/11?"]);
+				sendFiles(channelID, [steveBuscemi()]);
+				break;
 			case "y":
 				sendFiles(channelID, [haggisBotPath + "ytho.jpg"]);
 				break;
@@ -180,6 +184,7 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 					"me_irl \n" +
 					"wow! \n" +
 					"!faggot \n" +
+					"9/11 \n" +
 					"y \n" +
 					"!adminCommands \n" +
 					"```"])
@@ -297,8 +302,8 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 			var ysInMessage = message.match(/y/gi).length - 2;
 			var lmaoString = "lmao"
 
-			if(ysInMessage > 100){
-				return(sendMessages(channelID, ["lmaoooo-fuck you"]));
+			if (ysInMessage > 100) {
+				return (sendMessages(channelID, ["lmaoooo-fuck you"]));
 			}
 
 			for (i = 0; i < ysInMessage; i++) {
@@ -635,6 +640,44 @@ function addMusic(link, name) {
 	}
 
 	return results;
+}
+
+//###STEVE BUSCEMI###
+function steveBuscemi() {
+	var steveFolder = haggisBotPath + "steveBuscemi/";
+    var files = fs.readdirSync(steveFolder);
+
+	fileList = [];
+
+    for (var i in files) {
+        if (!files.hasOwnProperty(i)) continue;
+        var name = steveFolder + '/' + files[i];
+        if (!fs.statSync(name).isDirectory()) {
+            fileList.push(name);
+        }
+    }
+
+	var imageID = Math.floor((Math.random() * fileList.length) + 1);
+	return fileList[imageID];
+}
+
+//###ADAM###
+function adamClick() {
+	var adamFolder = haggisBotPath + "adamClick/";
+    var files = fs.readdirSync(adamFolder);
+
+	fileList = [];
+
+    for (var i in files) {
+        if (!files.hasOwnProperty(i)) continue;
+        var name = adamFolder + '/' + files[i];
+        if (!fs.statSync(name).isDirectory()) {
+            fileList.push(name);
+        }
+    }
+
+	var imageID = Math.floor((Math.random() * fileList.length) + 1);
+	return fileList[imageID];
 }
 
 //###QUINNLAN###
