@@ -297,6 +297,10 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 			var ysInMessage = message.match(/y/gi).length - 2;
 			var lmaoString = "lmao"
 
+			if(ysInMessage > 100){
+				return(sendMessages(channelID, ["lmaoooo-fuck you"]));
+			}
+
 			for (i = 0; i < ysInMessage; i++) {
 				lmaoString = lmaoString.concat("o");
 			}
