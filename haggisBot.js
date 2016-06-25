@@ -178,7 +178,6 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 					"!dickbutt \n" +
 					"slammin \n" +
 					"SLAMMIN \n" +
-					"kysLenny \n" +
 					"me irl \n" +
 					"meirl \n" +
 					"me_irl \n" +
@@ -278,10 +277,8 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 		}
 
 		//###I WON'T LIE###
-		if (messageArray[0] == "I" && messageArray[1] == "won't") {
-			if (messageArray[2] == "lie" || messageArray[2] == "lie,") {
-				sendMessages(channelID, [":ok_hand: :joy::sob: :laughing::ok_hand: :eggplant: :100: :poop: "]);
-			}
+		if (/(i).(won't|wont).(lie)/i.test(message)) {
+			sendMessages(channelID, [":ok_hand: :joy::sob: :laughing::ok_hand: :eggplant: :100: :poop: "]);
 		}
 
 		//###NO HOMO
