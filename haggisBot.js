@@ -61,7 +61,7 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 
 		//###FIND MENTIONS###
 		for (var key in mentions) {
-			if (mentions[key].id === haggisID && userID != haggisID) {
+			if (mentions[key].id === haggisID && userID != haggisID && userID != botfartID) {
 				return sendMessages(haggisID, [user + " pinged you with \"" + message + "\""]);
 			}
 		}
@@ -308,6 +308,11 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 			}
 
 			sendMessages(channelID, [lmaoString]);
+		}
+
+		//###OH SHIT WHADDUP###
+		if (/(oh).{0,1}(shit)/i.test(message)) {
+			sendMessages(channelID, ["whaddup"]);
 		}
 
 		//###FEATURE REQUESTS###
