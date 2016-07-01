@@ -69,7 +69,7 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 		//###FIND NAME###
 		if (userID != botfartID && userID != haggisID) {
 			for (i = 0; i < messageArray.length; i++) {
-				if (/H(a|o)ggis/i.test(messageArray[i])) {
+				if (/H(a|o)(gg|g)is/i.test(messageArray[i])) {
 					sendMessages(haggisID, [getDateTime() + "\n" + user + " pinged you with \"" + message + "\""]);
 				} else if (/Thomas/i.test(messageArray[i])) {
 					sendMessages(haggisID, [getDateTime() + "\n" + user + " pinged you with \"" + message + "\""]);
