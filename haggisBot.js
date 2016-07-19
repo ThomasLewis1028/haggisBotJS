@@ -1,29 +1,56 @@
-var properties = require('/home/thomas/discordBot/haggisBotJS/haggisBotProperties.json');
+var discordProperties = require('/home/thomas/discordBot/haggisBotJS/haggisBotProperties.json');
+var steamProperties = require('/home/thomas/steamBot/steamBotProperties.json');
 
 var Discordbot = require('discord.io');
 var bot = new Discordbot({
-	token: properties.token,
+	token: discordProperties.token,
 	autorun: true
+});
+
+var Steam = require('steam');
+var steamClient = new Steam.SteamClient();
+var steamUser = new Steam.SteamUser(steamClient);
+var steamFriends = new Steam.SteamFriends(steamClient);
+
+steamClient.connect();
+steamClient.on('connected', function () {
+	steamUser.logOn({
+		account_name: steamProperties.username,
+		password: steamProperties.password
+	});
 });
 
 var Cleverbot = require('cleverbot-node');
 cleverbot = new Cleverbot;
 
 var fs = require('fs');
-var haggisBotPath = properties.haggisBotPath;
-var musicBotPath = properties.musicBotPath;
-var haggisID = properties.haggisID;
-var botfartID = properties.botfartID;
-var popcheeseID = properties.popcheeseID;
-var modRole = properties.modRole;
-var pcmrServer = properties.pcmrServer;
-var pcmrSteamServer = properties.pcmrSteamServer;
-var cleverBotChannel = properties.cleverBotChannel;
-var musicReqChannel = properties.musicReqChannel;
-var featureReqChannel = properties.featureReqChannel;
-var autoplaylist = properties.autoplaylist;
-var musicBlacklist = properties.musicBlacklist;
 
+//Paths
+var haggisBotPath = discordProperties.haggisBotPath;
+var musicBotPath = discordProperties.musicBotPath;
+var steamBotPath = steamProperties.steamBotPath;
+//Discord Information
+var haggisDiscordID = discordProperties.haggisID;
+var botfartDiscordID = discordProperties.botfartID;
+var popcheeseID = discordProperties.popcheeseID;
+var seraID = discordProperties.seraID;
+var pcmrDiscordServer = discordProperties.pcmrServer;
+var pcmrDiscordRelay = discordProperties.pcmrRelayServer;
+var cleverBotChannel = discordProperties.cleverBotChannel;
+var musicReqChannel = discordProperties.musicReqChannel;
+var testingBooth = discordProperties.testingBooth;
+var autoplaylist = discordProperties.autoplaylist;
+var musicBlacklist = discordProperties.musicBlacklist;
+//Steam Information
+var steamProfile = steamProperties.profile;
+var pcmrSteamGroup = steamProperties.pcmrGroup;
+var haggisTestGroup = steamProperties.haggisTestGroup;
+var haggisSteamID = steamProperties.haggisID;
+var botfartSteamID = steamProperties.botfartID;
+var steamModIDs = steamProperties.steamMods;
+var lastSteamUserId;
+
+//Ready the Discord Bot
 bot.on("ready", function (rawEvent) {
 	try {
 		console.log("Connected!");
@@ -36,16 +63,29 @@ bot.on("ready", function (rawEvent) {
 			avatar: fs.readFileSync(haggisBotPath + '/Haggis.jpg', 'base64')
 		});
 
-		sendMessages(haggisID, ["Reconnected at " + getDateTime()]);
+		sendDiscordMessage(haggisDiscordID, ["Reconnected at " + getDateTime()]);
 	} catch (err) {
-		sendMessages(haggisID, ["ERROR: " + err]);
+		sendDiscordMessage(haggisDiscordID, ["ERROR: " + err]);
 		logError(getDateTime(), err);
 	}
 });
 
+//Do stuff when Steam Bot comes online
+steamClient.on('logOnResponse', function (logonResp) {
+	if (logonResp.eresult == Steam.EResult.OK) {
+		console.log('Logged in!');
+		steamFriends.setPersonaState(Steam.EPersonaState.Online);
+		steamFriends.setPersonaName(steamProfile);
+		steamFriends.joinChat(haggisTestGroup);
+		//steamFriends.joinChat(pcmrSteamGroup);
+	}
+});
+
+//Prepate Cleverbot
 Cleverbot.prepare(function () {
 });
 
+//###DO ON DISCORD MESSAGE###
 bot.on("message", function (user, userID, channelID, message, rawEvent) {
 	try {
 		if (channelID in bot.directMessages) {
@@ -59,51 +99,63 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 		var mentions = rawEvent.d.mentions;
 		var messageArray = message.split(" ");
 
+		//###RELAY STEAM CHAT###
+		if (channelID == pcmrDiscordRelay && userID != botfartDiscordID && userID != seraID) {
+			lastSteamUserId = botfartDiscordID;
+			return sendSteamMessage(pcmrSteamGroup, "[" + user + "]: " + message);
+		}
+
+		//###RELAY TEST CHAT###
+		if (channelID == testingBooth && userID != botfartDiscordID && userID != seraID) {
+			lastSteamUserId = botfartDiscordID;
+			return sendSteamMessage(haggisTestGroup, "[" + user + "]: " + message);
+		}
+
 		//###FIND MENTIONS###
 		for (var key in mentions) {
-			if (mentions[key].id === haggisID && userID != haggisID && userID != botfartID) {
-				return sendMessages(haggisID, [user + " pinged you with \"" + message + "\""]);
+			if (mentions[key].id === haggisDiscordID && userID != haggisDiscordID && userID != botfartDiscordID) {
+				return sendDiscordMessage(haggisDiscordID, [user + " pinged you with \"" + message + "\""]);
 			}
 		}
 
 		//###FIND NAME###
-		if (userID != botfartID && userID != haggisID) {
+		if (userID != botfartDiscordID && userID != haggisDiscordID) {
 			for (i = 0; i < messageArray.length; i++) {
-				if (/H(a|o)(gg|g)is/i.test(messageArray[i])) {
-					sendMessages(haggisID, [getDateTime() + "\n" + user + " pinged you with \"" + message + "\""]);
+				if (/^H(a|o)(gg|g)is$/i.test(messageArray[i])) {
+					sendDiscordMessage(haggisDiscordID, [getDateTime() + "\n" + user + " pinged you with \"" + message + "\""]);
 				} else if (/Thomas/i.test(messageArray[i])) {
-					sendMessages(haggisID, [getDateTime() + "\n" + user + " pinged you with \"" + message + "\""]);
+					sendDiscordMessage(haggisDiscordID, [getDateTime() + "\n" + user + " pinged you with \"" + message + "\""]);
 				}
 			}
 		}
 
-		if (serverID == pcmrServer || serverID == pcmrSteamServer) {
+		if (serverID == pcmrDiscordServer || serverID == pcmrDiscordRelay) {
 			return;
-		} else if (userID === botfartID) {
-			logChat(channelID, userID, user, getDateTime(), message);
+		} else if (userID === botfartDiscordID) {
+			logDiscordChat(channelID, userID, user, getDateTime(), message);
 			return;
-		} else if (serverID != pcmrServer || serverID != pcmrSteamServer) {
-			logChat(channelID, userID, user, getDateTime(), message);
+		} else if (serverID != pcmrDiscordServer || serverID != pcmrDiscordRelay) {
+			logDiscordChat(channelID, userID, user, getDateTime(), message);
 		}
 
 		//###SWITCH COMMANDS###
 		switch (messageArray[0]) {
 			//###REGULAR COMMANDS###
 			case "!rollsr":
-				sendMessages(channelID, [rollDiceSR(messageArray[1])]);
+				sendDiscordMessage(channelID, [rollDiceSR(messageArray[1])]);
 				break;
 			case "!roll":
-				sendMessages(channelID, [rollDiceSum(messageArray[1], messageArray[2])]);
+				sendDiscordMessage(channelID, [rollDiceSum(messageArray[1], messageArray[2])]);
 				break;
 			case "!card":
-				sendMessages(channelID, [pickACard()]);
+				sendDiscordMessage(channelID, [pickACard()]);
 				break;
 			case "!flipacoin":
 			case "!coinflip":
-				sendMessages(channelID, [flipACoin()]);
+				sendDiscordMessage(channelID, [flipACoin()]);
 				break;
 			case "!commands":
-				sendMessages(channelID, ["```\n" +
+				sendDiscordMessage(channelID, ["```\n" +
 					"!roll <X> <dY> \n" +
 					"!rollsr <X> d6 \n" +
 					"!card \n" +
@@ -117,7 +169,7 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 					"```"]);
 				break;
 			case "!musiccommands":
-				sendMessages(channelID, ["```\n" +
+				sendDiscordMessage(channelID, ["```\n" +
 					"!play <song link> \n" +
 					"!play <song text to search for \n" +
 					"!queue - current queue\n" +
@@ -144,14 +196,14 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 				}
 			case "kys":
 			case "killyourself":
-				sendMessages(channelID, ["https://youtu.be/2dbR2JZmlWo"]);
+				sendDiscordMessage(channelID, ["https://youtu.be/2dbR2JZmlWo"]);
 				break;
 			case "!dickbutt":
 				sendFiles(channelID, [richardKiester()]);
 				break;
 			case "slammin":
 			case "SLAMMIN":
-				sendMessages(channelID, ["https://youtu.be/kencI_SLNxw"]);
+				sendDiscordMessage(channelID, ["https://youtu.be/kencI_SLNxw"]);
 				break;
 			case "wow!":
 				sendFiles(channelID, [haggisBotPath + "wow.gif"]);
@@ -160,14 +212,14 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 				sendFiles(channelID, [qubeyPitts()]);
 				break;
 			case "9/11":
-				sendMessages(channelID, ["Did you know Steve Buscemi was a volunteer firefighter at 9/11?"]);
+				sendDiscordMessage(channelID, ["Did you know Steve Buscemi was a volunteer firefighter at 9/11?"]);
 				sendFiles(channelID, [steveBuscemi()]);
 				break;
 			case "y":
 				sendFiles(channelID, [haggisBotPath + "ytho.jpg"]);
 				break;
 			case "!superreallyincrediblysecretcommands":
-				sendMessages(channelID, ["```\n" +
+				sendDiscordMessage(channelID, ["```\n" +
 					"kys \n" +
 					"kill yourself \n" +
 					"killyourself \n" +
@@ -189,7 +241,7 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 					"```"])
 				break;
 			case "!adminCommands":
-				sendMessages(channelID, ["```\n" +
+				sendDiscordMessage(channelID, ["```\n" +
 					"!b @<user> \n" +
 					"!k @<user> \n" +
 					"```"]);
@@ -199,11 +251,11 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 
 		//###PING PONG###
 		if (/^ping$/i.test(message)) {
-			sendMessages(channelID, ["<@" + userID + "> pong"]);
+			sendDiscordMessage(channelID, ["<@" + userID + "> pong"]);
 		}
 
 		//##ADMIN CALL###
-		if (userID == popcheeseID || userID == haggisID && /^![bk]$/i.test(messageArray[0])) {
+		if (userID == popcheeseID || userID == haggisDiscordID && /^![bk]$/i.test(messageArray[0])) {
 			adminCommands(user, messageArray, channelID);
 		}
 
@@ -213,7 +265,7 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 
 			if (messageArray.length == 1) {
 				redditURL = redditURL.concat(message);
-				sendMessages(channelID, [redditURL]);
+				sendDiscordMessage(channelID, [redditURL]);
 			} else if (messageArray.length > 1) {
 				redditURL = redditURL.concat(messageArray[0]);
 				redditURL = redditURL.concat("/search?q=");
@@ -227,12 +279,12 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 				}
 
 				redditURL = redditURL.concat("&restrict_sr=on&sort=relevance&t=all");
-				sendMessages(channelID, [redditURL]);
+				sendDiscordMessage(channelID, [redditURL]);
 			}
 		}
 
 		//###MUSIC AUTOPLAY LIST###
-		if (channelID == musicReqChannel && userID != botfartID) {
+		if (channelID == musicReqChannel && userID != botfartDiscordID) {
 			var youtubeLink = "www.youtube.com/";
 			var youtubeShortLink = "https://youtu.be/";
 
@@ -240,11 +292,11 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 				var newArr = message.split("=");
 				var newLink = youtubeShortLink.concat(newArr[1]);
 
-				sendMessages(channelID, [addMusic(newLink, user)]);
+				sendDiscordMessage(channelID, [addMusic(newLink, user)]);
 			} else if (message.indexOf(youtubeShortLink) > -1) {
-				sendMessages(channelID, [addMusic(message, user)]);
+				sendDiscordMessage(channelID, [addMusic(message, user)]);
 			} else {
-				sendMessages(channelID, ["Please use a YouTube link"]);
+				sendDiscordMessage(channelID, ["Please use a YouTube link"]);
 			}
 		}
 
@@ -263,35 +315,35 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 
 			lmgtfy = lmgtfyLink.concat(lmgtfy);
 
-			sendMessages(channelID, [lmgtfy]);
+			sendDiscordMessage(channelID, [lmgtfy]);
 		}
 
 		//###CLEVERBOTFART###
-		if (channelID == cleverBotChannel && userID != botfartID) {
+		if (channelID == cleverBotChannel && userID != botfartDiscordID) {
 			cleverbot.write(message, function (response, err) {
 				if (err) {
 					console.log(err);
 				}
-				sendMessages(channelID, [response.message]);
+				sendDiscordMessage(channelID, [response.message]);
 			});
 		}
 
 		//###I WON'T LIE###
 		if (/(i).(won't|wont).(lie)/i.test(message)) {
-			sendMessages(channelID, [":ok_hand: :joy::sob: :laughing::ok_hand: :eggplant: :100: :poop: "]);
+			sendDiscordMessage(channelID, [":ok_hand: :joy::sob: :laughing::ok_hand: :eggplant: :100: :poop: "]);
 		}
 
 		//###NO HOMO
 		for (i = 0; i < messageArray.length; i++) {
 			if (/\bgay\b/i.test(messageArray[i])) {
-				sendMessages(channelID, ["no homo"]);
+				sendDiscordMessage(channelID, ["no homo"]);
 				break;
 			}
 		}
 
 		//###ME IRL M2THX###
 		if (/(me).{0,1}(irl)/i.test(message)) {
-			sendMessages(channelID, ["m2thx"]);
+			sendDiscordMessage(channelID, ["m2thx"]);
 		}
 
 		//###AYY LMAO###
@@ -300,44 +352,88 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 			var lmaoString = "lmao"
 
 			if (ysInMessage > 100) {
-				return (sendMessages(channelID, ["lmaoooo-fuck you"]));
+				return (sendDiscordMessage(channelID, ["lmaoooo-fuck you"]));
 			}
 
 			for (i = 0; i < ysInMessage; i++) {
 				lmaoString = lmaoString.concat("o");
 			}
 
-			sendMessages(channelID, [lmaoString]);
+			sendDiscordMessage(channelID, [lmaoString]);
 		}
 
 		//###OH SHIT WHADDUP###
 		if (/(oh).{0,1}(shit)/i.test(message)) {
-			sendMessages(channelID, ["whaddup"]);
-		}
-
-		//###FEATURE REQUESTS###
-		if (userID != haggisID && channelID == featureReqChannel) {
-			var yesOrNo = Math.floor((Math.random() * 25) + 1);
-
-			if (yesOrNo % 7 == 0) {
-				sendMessages(channelID, ["Maybe"]);
-			} else {
-				sendMessages(channelID, ["No"]);
-			}
+			sendDiscordMessage(channelID, ["whaddup"]);
 		}
 	} catch (err) {
-		sendMessages(haggisID, ["ERROR: " + err]);
+		sendDiscordMessage(haggisDiscordID, ["ERROR: " + err]);
 		logError(getDateTime(), err);
 	}
 });
+
+//###DO ON STEAM GROUP MESSAGE###
+steamFriends.on('chatMsg', function (serverID, message, type, userID) {
+	try {
+		var user = steamFriends.personaStates[userID].player_name;
+
+		var messageArray = message.split(" ");
+
+		//Relay Steam Chat
+		if (serverID == pcmrSteamGroup) {
+			if (userID != lastSteamUserId) {
+				sendDiscordMessage(pcmrDiscordRelay, ["**[" + user + "]:** \n" + message]);
+
+				lastSteamUserId = userID;
+			} else if (userID == lastSteamUserId) {
+				sendDiscordMessage(pcmrDiscordRelay, [message]);
+			}
+		}
+
+		//Relay Discord Chat
+		if (serverID == haggisTestGroup) {
+			if (userID != lastSteamUserId) {
+				sendDiscordMessage(testingBooth, ["**[" + user + "]:** \n" + message]);
+				
+				lastSteamUserId = userID;
+			} else if (userID == lastSteamUserId) {
+				sendDiscordMessage(testingBooth, [message]);
+			}
+		}
+
+		if (userID != botfartSteamID && userID != haggisSteamID) {
+			for (i = 0; i < messageArray.length; i++) {
+				if (/H(a|o)(gg|g)is/i.test(messageArray[i])) {
+					sendDiscordMessage(haggisDiscordID, ["Steam user [" + user + "] Pinged you with: " + message]);
+				}
+			}
+		}
+
+		//logSteamChat(serverID, userID, user, getDateTime(), message);
+	} catch (err) {
+		logError(getDateTime(), err);
+	}
+});
+
+//###DO ON STEAM PM###
+steamFriends.on('friendMsg', function (userID, message, type) {
+	if (type == 2 || type == 6) {
+		return;
+	}
+
+	if (userID == haggisSteamID && /^!rejoin$/i.test(message)) {
+		steamClient.disconnect();
+		steamClient.connect();
+	}
+})
 
 //###AUTO RECONNECT###
 bot.on("disconnected", function () {
 	bot.connect(); //Auto reconnect
 });
 
-//###FUNCTION DELCARATION AREA###
-function sendMessages(ID, messageArr, interval) {
+//###SEND DISCORD MESSAGE###
+function sendDiscordMessage(ID, messageArr, interval) {
 	var callback, resArr = [], len = messageArr.length;
 	typeof (arguments[2]) === 'function' ? callback = arguments[2] : callback = arguments[3];
 	if (typeof (interval) !== 'number') interval = 1000;
@@ -361,6 +457,11 @@ function sendMessages(ID, messageArr, interval) {
 		}, interval);
 	}
 	_sendMessages();
+}
+
+//###SEND STEAM MESSAGE###
+function sendSteamMessage(serverID, message) {
+	steamFriends.sendMessage(serverID, message, Steam.EChatEntryType.ChatMsg);
 }
 
 //###SEND FILES###
@@ -390,8 +491,8 @@ function sendFiles(channelID, fileArr, interval) {
 	_sendFiles();
 }
 
-//###LOG CHAT###
-function logChat(channelID, userID, user, time, message) {
+//###LOG DISCORD CHAT###
+function logDiscordChat(channelID, userID, user, time, message) {
 	var date = new Date();
 	var yyyy = date.getFullYear();
 	var mm = date.getMonth() + 1;
@@ -410,6 +511,27 @@ function logChat(channelID, userID, user, time, message) {
 
 	fs.appendFileSync(path + fileName, logContent, encoding = "utf8");
 }
+
+//###LOG STEAM CHAT###
+// function logSteamChat(serverID, userID, user, time, message) {
+// 	var date = new Date();
+// 	var yyyy = date.getFullYear();
+// 	var mm = date.getMonth() + 1;
+// 	mm = (mm < 10 ? "0" : "") + mm;
+// 	var dd = date.getDate();
+// 	dd = (dd < 10 ? "0" : "") + dd;
+
+// 	var path = steamBotPath + "logs/"
+// 	var fileName = yyyy + "-" + mm + "-" + dd + ".txt"
+
+// 	var logContent = yyyy + "-" + mm + "-" + dd + "-" + time + "\r\n"
+// 		+ user + " - " + userID + "\r\n"
+// 		+ "ServerID - " + serverID + "\r\n"
+// 		+ message + "\r\n"
+// 		+ "----------\r\n";
+
+// 	fs.appendFileSync(path + fileName, logContent, encoding = "utf8");
+//}
 
 //###LOG ERROR###
 function logError(time, err) {
@@ -638,7 +760,7 @@ function addMusic(link, name) {
 
 		results = "Song added to autoplaylist";
 
-		sendMessages(haggisID, [name + " added " + link + " to autoplay list"]);
+		sendDiscordMessage(haggisDiscordID, [name + " added " + link + " to autoplay list"]);
 	}
 
 	return results;
