@@ -1,5 +1,5 @@
 var discordProperties = require('/home/thomas/discordBot/haggisBotJS/haggisBotProperties.json');
-var steamProperties = require('/home/thomas/steamBot/steamBotProperties.json');
+var steamProperties = require('/home/thomas/discordBot/haggisBotJS/steamBotProperties.json');
 
 var Discordbot = require('discord.io');
 var bot = new Discordbot({
@@ -394,7 +394,7 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 		if (serverID == haggisTestGroup) {
 			if (userID != lastSteamUserId) {
 				sendDiscordMessage(testingBooth, ["**[" + user + "]:** \n" + message]);
-				
+
 				lastSteamUserId = userID;
 			} else if (userID == lastSteamUserId) {
 				sendDiscordMessage(testingBooth, [message]);
@@ -415,15 +415,45 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 	}
 });
 
+//###DO ON USER STATE CHANGE###
+steamFriends.on('chatStateChange', function (state, userID, serverID, modUserID) {
+	try {
+		var user = steamFriends.personaStates[userID].player_name;
+		var modUser = steamFriends.personaStates[modUserID].player_name;
+
+		switch (state) {
+			case 1: sendDiscordMessage(testingBooth, ["```" + user + " entered chat```"]);
+				break;
+			case 2: sendDiscordMessage(testingBooth, ["```" + user + " left chat```"]);
+				break;
+			case 8: sendDiscordMessage(testingBooth, ["```" + user + " was kicked by " + modUser + "```"]);
+				break;
+			case 16: sendDiscordMessage(testingBooth, ["```" + user + " was banned by " + modUser + "```"]);
+				break;
+		}
+	} catch (err) {
+		sendDiscordMessage(haggisDiscordID, [getDateTime() + "\n" + err]);
+		logError(getDateTime(), err);
+	}
+});
+
 //###DO ON STEAM PM###
 steamFriends.on('friendMsg', function (userID, message, type) {
 	if (type == 2 || type == 6) {
 		return;
 	}
 
-	if (userID == haggisSteamID && /^!rejoin$/i.test(message)) {
-		steamClient.disconnect();
-		steamClient.connect();
+	//If a mod tells the bot to rejoin, it rejoins
+	if (/^!rejoin$/i.test(message)) {
+		for (i = 0; i < steamModIDs.length; i++) {
+			if (userID == steamModIDs[i]) {
+				steamClient.disconnect();
+				steamClient.connect();
+				break;
+			}else{
+				continue;
+			}
+		}
 	}
 })
 
