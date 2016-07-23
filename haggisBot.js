@@ -33,6 +33,7 @@ var haggisDiscordID = discordProperties.haggisID;
 var botfartDiscordID = discordProperties.botfartID;
 var popcheeseID = discordProperties.popcheeseID;
 var seraID = discordProperties.seraID;
+var personalDiscordServer = discordProperties.personalDiscordServer;
 var pcmrDiscordServer = discordProperties.pcmrServer;
 var pcmrDiscordRelay = discordProperties.pcmrRelayServer;
 var cleverBotChannel = discordProperties.cleverBotChannel;
@@ -63,7 +64,7 @@ bot.on("ready", function (rawEvent) {
 			avatar: fs.readFileSync(haggisBotPath + '/Haggis.jpg', 'base64')
 		});
 
-		sendDiscordMessage(haggisDiscordID, ["Reconnected at " + getDateTime()]);
+		sendDiscordMessage(haggisDiscordID, ["DiscordBot Reconnected at " + getDateTime()]);
 	} catch (err) {
 		sendDiscordMessage(haggisDiscordID, ["ERROR: " + err]);
 		logError(getDateTime(), err);
@@ -78,6 +79,7 @@ steamClient.on('logOnResponse', function (logonResp) {
 		steamFriends.setPersonaName(steamProfile);
 		steamFriends.joinChat(haggisTestGroup);
 		steamFriends.joinChat(pcmrSteamGroup);
+		sendDiscordMessage(haggisDiscordID, ["SteamBot Reconnected at " + getDateTime()]);
 	}
 });
 
@@ -101,7 +103,6 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 
 		//Ignore Self
 		if (userID === botfartDiscordID) {
-			logDiscordChat(channelID, userID, user, getDateTime(), message);
 			return;
 		}
 
@@ -120,18 +121,23 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 
 		//###FIND MENTIONS###
 		for (var key in mentions) {
-			if (mentions[key].id === haggisDiscordID && userID != haggisDiscordID) {
-				return sendDiscordMessage(haggisDiscordID, [user + " pinged you with \"" + message + "\""]);
+			if (mentions[key].id === haggisDiscordID && userID != haggisDiscordID && serverID != personalDiscordServer) {
+				return sendDiscordMessage(haggisDiscordID,
+					[getDateTime() + "\nDiscord user *" + user + "* pinged you with: \n```" + message + "```"]);
 			}
 		}
 
 		//###FIND NAME###
 		if (userID != botfartDiscordID && userID != haggisDiscordID) {
 			for (i = 0; i < messageArray.length; i++) {
-				if (/^H(a|o)(gg|g)is$/i.test(messageArray[i])) {
-					sendDiscordMessage(haggisDiscordID, [getDateTime() + "\n" + user + " pinged you with \"" + message + "\""]);
-				} else if (/Thomas/i.test(messageArray[i])) {
-					sendDiscordMessage(haggisDiscordID, [getDateTime() + "\n" + user + " pinged you with \"" + message + "\""]);
+				if (/(H|F)(a|o)(gg|g)is/i.test(messageArray[i])) {
+					sendDiscordMessage(haggisDiscordID,
+						[getDateTime() + "\nDiscord user **" + user + "** pinged you with ```" + message + "```"]);
+					break;
+				} else if (/Thomas/i.test(messageArray[i]) && serverID == personalDiscordServer) {
+					sendDiscordMessage(haggisDiscordID,
+						[getDateTime() + "\nDiscord user **" + user + "** pinged you with ```" + message + "```"]);
+					break;
 				}
 			}
 		}
@@ -154,8 +160,6 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 		//Do in certain servers
 		if (serverID == pcmrDiscordServer || serverID == pcmrDiscordRelay) {
 			return;
-		} else if (serverID != pcmrDiscordServer || serverID != pcmrDiscordRelay) {
-			logDiscordChat(channelID, userID, user, getDateTime(), message);
 		}
 
 
@@ -428,8 +432,9 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 		//Check User Mentions
 		if (userID != botfartSteamID && userID != haggisSteamID) {
 			for (i = 0; i < messageArray.length; i++) {
-				if (/^H(a|o)(gg|g)is$/i.test(messageArray[i])) {
-					sendDiscordMessage(haggisDiscordID, ["Steam user [" + user + "] Pinged you with: " + message]);
+				if (/(H|F)(a|o)(gg|g)is/i.test(messageArray[i])) {
+					sendDiscordMessage(haggisDiscordID,
+						[getDateTime() + "\nSteam user **" + user + "** Pinged you with: \n```" + message + "```"]);
 				}
 			}
 		}
@@ -445,23 +450,32 @@ steamFriends.on('chatStateChange', function (state, userID, serverID, modUserID)
 		var modUser = steamFriends.personaStates[modUserID].player_name;
 		lastSteamUserId = botfartSteamID;
 
-		switch (state) {
-			case 1: sendDiscordMessage(pcmrDiscordRelay, ["```" + user + " entered chat```"]);
-				logSteamChat(serverID, userID, user, getDateTime(),
-					user + " entered chat")
-				break;
-			case 2: sendDiscordMessage(pcmrDiscordRelay, ["```" + user + " left chat```"]);
-				logSteamChat(serverID, userID, user, getDateTime(),
-					user + " left chat")
-				break;
-			case 8: sendDiscordMessage(pcmrDiscordRelay, ["```" + user + " was kicked by " + modUser + "```"]);
-				logSteamChat(serverID, userID, user, getDateTime(),
-					user + " was kicked by " + modUser)
-				break;
-			case 16: sendDiscordMessage(pcmrDiscordRelay, ["```" + user + " was banned by " + modUser + "```"]);
-				logSteamChat(serverID, userID, user, getDateTime(),
-					user + " was banned by " + modUser)
-				break;
+		if (serverID == pcmrSteamGroup) {
+			switch (state) {
+				case 1:		//User Entered
+					sendDiscordMessage(pcmrDiscordRelay, ["```" + user + " entered chat```"]);
+					logSteamChat(serverID, userID, user, getDateTime(), user + " entered chat")
+					break;
+				case 2:		//User Left
+					sendDiscordMessage(pcmrDiscordRelay, ["```" + user + " left chat```"]);
+					logSteamChat(serverID, userID, user, getDateTime(), user + " left chat")
+					break;
+				case 4:		//User Disconnected
+					sendDiscordMessage(pcmrDiscordRelay, ["```" + user + " disconnected```"]);
+					logSteamChat(serverID, userID, user, getDateTime(), user + " disconnected")
+					break;
+				case 8:		//User Kicked
+					sendDiscordMessage(pcmrDiscordRelay, ["```" + user + " was kicked by " + modUser + "```"]);
+					logSteamChat(serverID, userID, user, getDateTime(), user + " was kicked by " + modUser)
+					break;
+				case 16:	//User Banned
+					sendDiscordMessage(pcmrDiscordRelay, ["```" + user + " was banned by " + modUser + "```"]);
+					logSteamChat(serverID, userID, user, getDateTime(), user + " was banned by " + modUser)
+					break;
+				default:	//Send me a message when there's a new state
+					sendDiscordMessage(haggisDiscordID, [getDateTime() + " - Unknown State: " + state]);
+					break;
+			}
 		}
 	} catch (err) {
 		sendDiscordMessage(haggisDiscordID, [getDateTime() + "\n" + err]);
@@ -471,12 +485,17 @@ steamFriends.on('chatStateChange', function (state, userID, serverID, modUserID)
 
 //###DO ON CHAT INVITE###
 steamFriends.on('chatInvite', function (chatID, chatName, userID) {
-	if (chatID == pcmrSteamGroup) {
-		for (i = 0; i < steamModIDs.length; i++) {
-			if (userID == steamModIDs[i]) {
-				steamFriends.joinChat(chatID);
+	try {
+		if (chatID == pcmrSteamGroup || chatID == haggisTestGroup) {
+			for (i = 0; i < steamModIDs.length; i++) {
+				if (userID == steamModIDs[i]["modID"]) {
+					steamFriends.joinChat(chatID);
+				}
 			}
 		}
+	} catch (err) {
+		sendDiscordMessage(haggisDiscordID, [getDateTime() + "\n" + err]);
+		logError(getDateTime(), err);
 	}
 });
 
