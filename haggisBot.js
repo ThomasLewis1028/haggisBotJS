@@ -24,12 +24,10 @@ steamClient.on('connected', function () {
 var Cleverbot = require('cleverbot-node');
 cleverbot = new Cleverbot;
 
-var redis = require("redis"),
-    rClient = redis.createClient();
+// var redis = require("redis"),
+//     rClient = redis.createClient();
 
 var fs = require('fs');
-
-var jsonfile = require('jsonfile');
 
 //Paths
 var haggisBotPath = discordProperties.haggisBotPath;
@@ -416,6 +414,10 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 
 		var messageArray = message.split(" ");
 
+		if(message.length > 250){
+			steamFriends.ban(serverID, userID);
+		}
+
 		//Relay Steam Chat
 		if (serverID == pcmrSteamGroup && userID != botfartSteamID) {
 			logSteamChat(serverID, userID, user, getDateTime(), message);
@@ -445,7 +447,7 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 		if (/^!(k|b|bid)$/i.test(messageArray[0])) {
 			for (i = 0; i < steamModIDs.length; i++) {
 				if (userID == steamModIDs[i]["modID"]) {
-
+					
 				}
 			}
 		}
@@ -603,6 +605,9 @@ steamFriends.on('chatStateChange', function (state, userID, serverID, modUserID)
 				case 16:	//User Banned
 					sendDiscordMessage(pcmrDiscordRelay, ["```" + user + " was banned by " + modUser + "```"]);
 					logSteamChat(serverID, userID, user, getDateTime(), user + " was banned by " + modUser)
+					break;
+				case 4096:
+				case 8192:
 					break;
 				default:	//Send me a message when there's a new state
 					sendDiscordMessage(haggisDiscordID, [getDateTime() + " - Unknown State: " + state]);
