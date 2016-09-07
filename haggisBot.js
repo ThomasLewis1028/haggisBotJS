@@ -2,8 +2,8 @@ var discordProperties = require('/home/thomas/discordBot/haggisBotJS/haggisBotPr
 var steamProperties = require('/home/thomas/discordBot/haggisBotJS/steamBotProperties.json');
 var userInformation = require('/home/thomas/discordBot/haggisBotJS/userInformation.json');
 
-var Discordbot = require('discord.io');
-var bot = new Discordbot({
+var Discord = require('discord.io');
+var bot = new Discord.Client({
 	token: discordProperties.token,
 	autorun: true
 });
@@ -20,6 +20,14 @@ steamClient.on('connected', function () {
 		password: steamProperties.password
 	});
 });
+
+var MongoClient = require('mongodb').MongoClient;
+
+MongoClient.connect("mongodb://13.89.32.166:27017/steamUserDB", function(err, db){
+	if(!err){
+		comsole.log("Connected to MongoDB");
+	}
+})
 
 var Cleverbot = require('cleverbot-node');
 cleverbot = new Cleverbot;
@@ -65,11 +73,6 @@ bot.on("ready", function (rawEvent) {
 		console.log(bot.username + " - (" + bot.id + ")");
 		console.log(bot.internals.version);
 		console.log("----------")
-
-		bot.editUserInfo({
-			avatar: fs.readFileSync(haggisBotPath + '/Haggis.jpg', 'base64')
-		});
-
 		sendDiscordMessage(haggisDiscordID, ["DiscordBot Reconnected at " + getDateTime()]);
 	} catch (err) {
 		sendDiscordMessage(haggisDiscordID, ["ERROR: " + err]);
@@ -104,6 +107,7 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 		}
 
 		var mentions = rawEvent.d.mentions;
+		var messageID = rawEvent.d.id;
 		var messageArray = message.split(" ");
 
 		//###INGORE SELF###
@@ -115,7 +119,11 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 		if (channelID == pcmrDiscordRelay && userID != seraID) {
 			lastSteamUserId = botfartDiscordID;
 			logSteamChat(channelID, userID, user, getDateTime(), message);
-			return sendSteamMessage(pcmrSteamGroup, "[" + user + "]: " + message);
+			if (message.length < 500) {
+				return sendSteamMessage(pcmrSteamGroup, "[" + user + "]: " + message);
+			} else if (message.length >= 500) {
+				return sendDiscordMessage(channelID, ["Please do not send more than 500 Characters"]);
+			}
 		}
 
 		//###RELAY TEST CHAT###
@@ -414,7 +422,7 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 
 		var messageArray = message.split(" ");
 
-		if(message.length > 250){
+		if (message.length > 250) {
 			steamFriends.ban(serverID, userID);
 		}
 
@@ -447,7 +455,7 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 		if (/^!(k|b|bid)$/i.test(messageArray[0])) {
 			for (i = 0; i < steamModIDs.length; i++) {
 				if (userID == steamModIDs[i]["modID"]) {
-					
+
 				}
 			}
 		}
@@ -458,6 +466,7 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 				if (/(H|F)(a|o)(gg|g)is/i.test(messageArray[i])) {
 					sendDiscordMessage(haggisDiscordID,
 						[getDateTime() + "\nSteam user **" + user + "** Pinged you with: \n```" + message + "```"]);
+					break;
 				}
 			}
 		}
@@ -568,7 +577,11 @@ function discordModCommands(user, messageArray, channelID) {
 }
 
 //###AUTO RECONNECT###
-bot.on("disconnected", function () {
+bot.on('disconnect', function (message, code) {
+	if(code === 0){
+		sendDiscordMessage(haggisDiscordID, message);
+		return logError(getDateTime(), message);
+	}
 	bot.connect(); //Auto reconnect
 });
 
