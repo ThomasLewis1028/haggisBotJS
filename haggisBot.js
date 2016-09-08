@@ -1,6 +1,5 @@
 var discordProperties = require('/home/thomas/discordBot/haggisBotJS/haggisBotProperties.json');
 var steamProperties = require('/home/thomas/discordBot/haggisBotJS/steamBotProperties.json');
-var userInformation = require('/home/thomas/discordBot/haggisBotJS/userInformation.json');
 
 var Discord = require('discord.io');
 var bot = new Discord.Client({
@@ -23,8 +22,8 @@ steamClient.on('connected', function () {
 
 var MongoClient = require('mongodb').MongoClient;
 
-MongoClient.connect("mongodb://13.89.32.166:27017/steamUserDB", function(err, db){
-	if(!err){
+MongoClient.connect("mongodb://13.89.32.166:27017/steamUserDB", function (err, db) {
+	if (!err) {
 		comsole.log("Connected to MongoDB");
 	}
 })
@@ -62,7 +61,6 @@ var haggisTestGroup = steamProperties.haggisTestGroup;
 var haggisSteamID = steamProperties.haggisID;
 var botfartSteamID = steamProperties.botfartID;
 var steamModIDs = steamProperties.steamMods;
-var userInfoPath = '/home/thomas/discordBot/haggisBotJS/userInformation.json';
 var lastSteamUserId;
 
 //Ready the Discord Bot
@@ -106,9 +104,14 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 			var server = bot.servers[serverID];
 		}
 
-		var mentions = rawEvent.d.mentions;
-		var messageID = rawEvent.d.id;
 		var messageArray = message.split(" ");
+		var messageID = rawEvent.d.id;
+		var mentions = rawEvent.d.mentions;
+		var attachments = rawEvent.d.attachments;
+		if (rawEvent.d.attachments[0] != null) {
+			var fileLink = rawEvent.d.attachments[0].url;
+		}
+
 
 		//###INGORE SELF###
 		if (userID === botfartDiscordID) {
@@ -120,8 +123,14 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 			lastSteamUserId = botfartDiscordID;
 			logSteamChat(channelID, userID, user, getDateTime(), message);
 			if (message.length < 500) {
-				return sendSteamMessage(pcmrSteamGroup, "[" + user + "]: " + message);
+				if (fileLink) {
+					return sendSteamMessage(pcmrSteamGroup, "[" + user + "]: " + message + "\n"
+						+ fileLink);
+				} else {
+					return sendSteamMessage(pcmrSteamGroup, "[" + user + "]: " + message);
+				}
 			} else if (message.length >= 500) {
+				bot.deleteMessage({messageID, channelID});
 				return sendDiscordMessage(channelID, ["Please do not send more than 500 Characters"]);
 			}
 		}
@@ -578,7 +587,7 @@ function discordModCommands(user, messageArray, channelID) {
 
 //###AUTO RECONNECT###
 bot.on('disconnect', function (message, code) {
-	if(code === 0){
+	if (code === 0) {
 		sendDiscordMessage(haggisDiscordID, message);
 		return logError(getDateTime(), message);
 	}
@@ -686,31 +695,6 @@ function logRetrieve(channelID, userID, yyyy, mm, dd) {
 	}
 }
 
-//###CHECK USER INFO###
-function isUserListed(userID) {
-	for (i = 0; i < userInformation.length; i++) {
-		if (userID == userInformation[i]["userID"]) {
-			return true;
-		}
-	}
-	return false;
-}
-
-//###WRITE USER INFO###
-function writeUserInfo(userID, user, lastMessage, lastSeen) {
-	try {
-		var obj = {
-			userID: userID,
-			user: user,
-			lastMessage: lastMessage,
-			lastSeen: lastSeen
-		}
-		userInformation[userInformation.length] = JSON.stringify(obj);
-	} catch (err) {
-		sendDiscordMessage(haggisDiscordID, [err]);
-	}
-}
-
 // //###DO ON STEAM PM###
 steamFriends.on('friendMsg', function (userID, message, type) {
 	try {
@@ -724,6 +708,27 @@ steamFriends.on('friendMsg', function (userID, message, type) {
 		sendDiscordMessage(haggisDiscordID, [err]);
 	}
 })
+
+/**#########################################################
+ * Database Functions
+ * MongoDB related stuff
+ #########################################################**/
+function addUserToList(userID, name) {
+	db.users.insert({
+		userID: userID,
+		name: name,
+		lastMsg: null,
+		logOutTime: null,
+		msgCount: null
+	})
+}
+
+function isUserListed(userID) {
+	db.users.find({
+		userID: userID
+	})
+}
+
 
 /**#########################################################
  * Shared functions
