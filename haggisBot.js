@@ -55,6 +55,7 @@ var haggisTestGroup = steamProperties.haggisTestGroup;
 var haggisSteamID = steamProperties.haggisID;
 var botfartSteamID = steamProperties.botfartID;
 var steamModIDs = steamProperties.steamMods;
+var steamModDiscordIDs = steamProperties.steamModDiscordIDs;
 var lastSteamUserId;
 
 //Ready the Discord Bot
@@ -117,6 +118,14 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 			lastSteamUserId = botfartDiscordID;
 			logSteamChat(channelID, userID, user, getDateTime(), message);
 
+			if (/^!(jk|k|b|bid)$/i.test(messageArray[0])) {
+				for (i = 0; i < steamModDiscordIDs.length; i++) {
+					if (userID == steamModDiscordIDs[i]["modID"]) {
+						steamModCommands(userID, messageArray, pcmrSteamGroup);
+					}
+				}
+			}
+
 			if (message.length < 500) {
 				if (fileLink) {
 					return sendSteamMessage(pcmrSteamGroup, "[" + user + "]: " + message + "\n"
@@ -134,29 +143,6 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 		if (channelID == testingBooth && userID != seraID) {
 			lastSteamUserId = botfartDiscordID;
 			return sendSteamMessage(haggisTestGroup, "[" + user + "]: " + message);
-		}
-
-		//###FIND MENTIONS###
-		for (var key in mentions) {
-			if (mentions[key].id === haggisDiscordID && userID != haggisDiscordID && serverID != personalDiscordServer) {
-				return sendDiscordMessage(haggisDiscordID,
-					[getDateTime() + "\nDiscord user *" + user + "* pinged you with: \n```" + message + "```"]);
-			}
-		}
-
-		//###FIND NAME###
-		if (userID != botfartDiscordID && userID != haggisDiscordID) {
-			for (i = 0; i < messageArray.length; i++) {
-				if (/(H|F)(a|o)(gg|g)is/i.test(messageArray[i])) {
-					sendDiscordMessage(haggisDiscordID,
-						[getDateTime() + "\nDiscord user **" + user + "** pinged you with ```" + message + "```"]);
-					break;
-				} else if (/Thomas/i.test(messageArray[i]) && serverID == personalDiscordServer) {
-					sendDiscordMessage(haggisDiscordID,
-						[getDateTime() + "\nDiscord user **" + user + "** pinged you with ```" + message + "```"]);
-					break;
-				}
-			}
 		}
 
 		//###LOG RETRIEVAL###
@@ -411,21 +397,18 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 //###DO ON STEAM GROUP MESSAGE###
 steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 	try {
-		if (userID == haggisSteamID) {
-			// console.log(steamFriends)
-		}
-
 		var user = steamFriends.personaStates[userID].player_name;
 		var messageArray = message.split(" ");
 		var lastMsgTime = Date.now()
 		var last5Times
 
 		usersDB.find({ _id: userID }, function (err, docs) {
-			console.log("Within Doc\n"+docs[0].last5Times)
-			last5Times = docs[0].last5Times
+			// console.log("Within Doc\n"+docs[0].last5Times)
+			// last5Times[0] = docs[0].last5Times[0]
+			// last5Times[1] = docs[0].last5Times[4]
 		})
 
-		console.log("Local Var\n"+last5Times)
+		// console.log("Local Var\n"+last5Times)
 
 		//Kick or ban if sending messages too fast
 		// if (last5Times[4] - last5Times[0] < 3000) {
@@ -560,7 +543,7 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 		}
 
 		//Steam mod call
-		if (/^!(k|b|bid)$/i.test(messageArray[0])) {
+		if (/^!(jk|k|b|bid)$/i.test(messageArray[0])) {
 			for (i = 0; i < steamModIDs.length; i++) {
 				if (userID == steamModIDs[i]["modID"]) {
 					steamModCommands(userID, messageArray, serverID);
@@ -761,21 +744,6 @@ steamFriends.on('chatStateChange', function (state, userID, serverID, modUserID)
 				case 8:		//User Kicked
 					sendDiscordMessage(pcmrDiscordRelay, ["```" + user + " was kicked by " + modUser + "```"]);
 					logSteamChat(serverID, userID, user, getDateTime(), user + " was kicked by " + modUser)
-
-					var strikes;
-					usersDB.find({ _id: userID }, function (err, docs) {
-						strikes = docs[0].strikes;
-					})
-
-					strikes++;
-					usersDB.update({ _id: userID },
-						{
-							$set: {
-								strikes: strikes
-							}
-						}, {}, function () {
-							usersDB.persistence.compactDatafile()
-						})
 					break;
 				case 16:	//User Banned
 					sendDiscordMessage(pcmrDiscordRelay, ["```" + user + " was banned by " + modUser + "```"]);
@@ -876,19 +844,52 @@ steamFriends.on('friendMsg', function (userID, message, type) {
 })
 
 //###STEAM MOD COMMANDS###
-function steamModCommands(userID, messageArray, serverID) {
-	steamFriends.requestFriendData()
-	var userToActUpon;
-	// for (i = 0; i < steamFriends.chatRooms.length; i++) {
-	// 	if (steamFriends.chatRooms[i] == serverID) {
-	// 		var userIDList = steamFriends.chatRooms[i]
-	// 	}
-	// }
+function steamModCommands(modUserID, messageArray, serverID) {
+	var user;
+	var currUserIDList = Object.keys(steamFriends.chatRooms[pcmrSteamGroup]);
+	var re = RegExp(messageArray[1], "i")
+	var length = currUserIDList.length
 
+	for (i = 0; i < length; i++) {
+		currUserIDList.push(steamFriends.personaStates[currUserIDList[i]].player_name);
+	}
 
+	for (i = length; i < currUserIDList.length; i++) {
+		if (re.test(currUserIDList[i])) {
+			user = currUserIDList[i - length]
+			break
+		}
+	}
 
-	if (/^!bid$/i) {
-		steamFriends.ban(serverID, messageArray[1]);
+	if (/^!jk$/i.test(messageArray[0])) {
+		return steamFriends.kick(serverID, user)
+	}
+
+	if (/^!k$/i.test(messageArray[0])) {
+		var strikes;
+		usersDB.find({ _id: userID }, function (err, docs) {
+			strikes = docs[0].strikes;
+		})
+
+		strikes++;
+		usersDB.update({ _id: userID },
+			{
+				$set: {
+					strikes: strikes
+				}
+			}, {}, function () {
+				usersDB.persistence.compactDatafile()
+			})
+
+		return steamFriends.kick(serverID, user)
+	}
+
+	if (/^!b$/i.test(messageArray[0])) {
+		return steamFriends.kick(serverID, user)
+	}
+
+	if (/^!bid$/i.test(messageArray[0])) {
+		return steamFriends.ban(serverID, messageArray[1]);
 	}
 }
 
