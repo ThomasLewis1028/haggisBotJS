@@ -868,9 +868,11 @@ steamFriends.on('friendMsg', function (userID, message, type) {
 
 //###STEAM MOD COMMANDS###
 function steamModCommands(userID, messageArray, serverID) {
+	steamFriends.requestFriendData()
 	var userToActUpon;
+	
 
-	if (/^!bid$/i) {
+	if(/^!bid$/i) {
 		steamFriends.ban(serverID, messageArray[1]);
 	}
 }
