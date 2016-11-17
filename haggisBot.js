@@ -411,51 +411,60 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 //###DO ON STEAM GROUP MESSAGE###
 steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 	try {
+		if (userID == haggisSteamID) {
+			// console.log(steamFriends)
+		}
+
 		var user = steamFriends.personaStates[userID].player_name;
 		var messageArray = message.split(" ");
 		var lastMsgTime = Date.now()
 		var last5Times
 
 		usersDB.find({ _id: userID }, function (err, docs) {
+			console.log("Within Doc\n"+docs[0].last5Times)
 			last5Times = docs[0].last5Times
 		})
 
-		if (last5Times[4] - last5Times[0] < 3000) {
-			var strikes;
-			usersDB.find({ _id: userID }, function (err, docs) {
-				strikes = docs[0].strikes;
-			})
+		console.log("Local Var\n"+last5Times)
 
-			if (strikes < 3) {
-				strikes++;
-				steamFriends.kick(serverID, userID)
-				sendSteamMessage(userID, "Please don't spam the chat");
-				sendSteamMessage(userID, "You have " + strikes + " strikes")
+		//Kick or ban if sending messages too fast
+		// if (last5Times[4] - last5Times[0] < 3000) {
+		// 	var strikes;
+		// 	usersDB.find({ _id: userID }, function (err, docs) {
+		// 		strikes = docs[0].strikes;
+		// 	})
 
-				usersDB.update({ _id: userID },
-					{
-						$set: {
-							strikes: strikes
-						}
-					}, {}, function () {
-						usersDB.persistence.compactDatafile()
-					})
-			} else {
-				sendSteamMessage(userID, "You were banned for sending too many messages");
-				steamFriends.ban(serverID, userID);
-				usersDB.update({ _id: userID },
-					{
-						$set: {
-							strikes: 0
-						}
-					}, {}, function () {
-						usersDB.persistence.compactDatafile()
-					})
-			}
+		// 	if (strikes < 3) {
+		// 		strikes++;
+		// 		steamFriends.kick(serverID, userID)
+		// 		sendSteamMessage(userID, "Please don't spam the chat");
+		// 		sendSteamMessage(userID, "You have " + strikes + " strikes")
 
-		}
+		// 		usersDB.update({ _id: userID },
+		// 			{
+		// 				$set: {
+		// 					strikes: strikes
+		// 				}
+		// 			}, {}, function () {
+		// 				usersDB.persistence.compactDatafile()
+		// 			})
+		// 	} else {
+		// 		sendSteamMessage(userID, "You were banned for sending too many messages" +
+		// 			" characters and received " + strikes + " strikes already");
+		// 		steamFriends.ban(serverID, userID);
+		// 		usersDB.update({ _id: userID },
+		// 			{
+		// 				$set: {
+		// 					strikes: 0
+		// 				}
+		// 			}, {}, function () {
+		// 				usersDB.persistence.compactDatafile()
+		// 			})
+		// 	}
 
-		//Kick or ban in more than 500 characters is sent
+		// }
+
+		//Kick or ban if more than 500 characters is sent
 		if (message.length > 500) {
 			var strikes;
 			usersDB.find({ _id: userID }, function (err, docs) {
@@ -478,7 +487,7 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 					})
 			} else {
 				sendSteamMessage(userID, "You were banned for sending more than 500" +
-					" characters and received 3 strikes already");
+					" characters and received " + strikes + " strikes already");
 				steamFriends.ban(serverID, userID);
 				usersDB.update({ _id: userID },
 					{
@@ -870,9 +879,15 @@ steamFriends.on('friendMsg', function (userID, message, type) {
 function steamModCommands(userID, messageArray, serverID) {
 	steamFriends.requestFriendData()
 	var userToActUpon;
-	
+	// for (i = 0; i < steamFriends.chatRooms.length; i++) {
+	// 	if (steamFriends.chatRooms[i] == serverID) {
+	// 		var userIDList = steamFriends.chatRooms[i]
+	// 	}
+	// }
 
-	if(/^!bid$/i) {
+
+
+	if (/^!bid$/i) {
 		steamFriends.ban(serverID, messageArray[1]);
 	}
 }
