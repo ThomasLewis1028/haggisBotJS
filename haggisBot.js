@@ -23,7 +23,6 @@ steamClient.on('connected', function () {
 var Datastore = require('nedb'),
 	usersDB = new Datastore('/home/thomas/discordBot/haggisBotJS/databases/users.db');
 
-
 usersDB.loadDatabase();
 
 var Cleverbot = require('cleverbot-node');
@@ -79,7 +78,7 @@ steamClient.on('logOnResponse', function (logonResp) {
 		console.log('Logged in!');
 		steamFriends.setPersonaState(Steam.EPersonaState.Online);
 		steamFriends.setPersonaName(steamProfile);
-		steamFriends.joinChat(haggisTestGroup);
+		// steamFriends.joinChat(haggisTestGroup);
 		steamFriends.joinChat(pcmrSteamGroup);
 		sendDiscordMessage(haggisDiscordID, ["SteamBot Reconnected at " + getDateTime()]);
 	}
@@ -378,14 +377,6 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 			sendDiscordMessage(channelID, [":ok_hand: :joy::sob: :laughing::ok_hand: :eggplant: :100: :poop: "]);
 		}
 
-		//###NO HOMO
-		for (i = 0; i < messageArray.length; i++) {
-			if (/\bgay\b/i.test(messageArray[i])) {
-				sendDiscordMessage(channelID, ["no homo"]);
-				break;
-			}
-		}
-
 		//###ME IRL M2THX###
 		if (/(me).{0,1}(irl)/i.test(message)) {
 			sendDiscordMessage(channelID, ["m2thx"]);
@@ -407,9 +398,9 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 			sendDiscordMessage(channelID, [lmaoString]);
 		}
 
-		//###OH SHIT WHADDUP###
-		if (/(oh).{0,1}(shit)/i.test(message)) {
-			sendDiscordMessage(channelID, ["whaddup"]);
+		//###DEUS VULT###
+		if (/^deus vult$/i.test(message)) {
+			sendFiles(channelID, [deusVult()]);
 		}
 	} catch (err) {
 		sendDiscordMessage(haggisDiscordID, ["ERROR: " + err]);
@@ -421,25 +412,114 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 	try {
 		var user = steamFriends.personaStates[userID].player_name;
-
 		var messageArray = message.split(" ");
+		var lastMsgTime = Date.now()
+		var last5Times
 
+		usersDB.find({ _id: userID }, function (err, docs) {
+			last5Times = docs[0].last5Times
+		})
+
+		if (last5Times[4] - last5Times[0] < 3000) {
+			var strikes;
+			usersDB.find({ _id: userID }, function (err, docs) {
+				strikes = docs[0].strikes;
+			})
+
+			if (strikes < 3) {
+				strikes++;
+				steamFriends.kick(serverID, userID)
+				sendSteamMessage(userID, "Please don't spam the chat");
+				sendSteamMessage(userID, "You have " + strikes + " strikes")
+
+				usersDB.update({ _id: userID },
+					{
+						$set: {
+							strikes: strikes
+						}
+					}, {}, function () {
+						usersDB.persistence.compactDatafile()
+					})
+			} else {
+				sendSteamMessage(userID, "You were banned for sending too many messages");
+				steamFriends.ban(serverID, userID);
+				usersDB.update({ _id: userID },
+					{
+						$set: {
+							strikes: 0
+						}
+					}, {}, function () {
+						usersDB.persistence.compactDatafile()
+					})
+			}
+
+		}
+
+		//Kick or ban in more than 500 characters is sent
 		if (message.length > 500) {
-			steamFriends.ban(serverID, userID);
+			var strikes;
+			usersDB.find({ _id: userID }, function (err, docs) {
+				strikes = docs[0].strikes;
+			})
+
+			if (strikes < 3) {
+				strikes++;
+				steamFriends.kick(serverID, userID)
+				sendSteamMessage(userID, "Please don't send more than 500 characters.");
+				sendSteamMessage(userID, "You have " + strikes + " strikes")
+
+				usersDB.update({ _id: userID },
+					{
+						$set: {
+							strikes: strikes
+						}
+					}, {}, function () {
+						usersDB.persistence.compactDatafile()
+					})
+			} else {
+				sendSteamMessage(userID, "You were banned for sending more than 500" +
+					" characters and received 3 strikes already");
+				steamFriends.ban(serverID, userID);
+				usersDB.update({ _id: userID },
+					{
+						$set: {
+							strikes: 0
+						}
+					}, {}, function () {
+						usersDB.persistence.compactDatafile()
+					})
+			}
 		}
 
 		if (serverID == pcmrSteamGroup) {
 			if (isUserListed(userID) == false) {
 				addUser(userID, user)
 			}
-			usersDB.update({
-				_id: userID
-			},
+
+			usersDB.update({ _id: userID },
 				{
 					$set: {
-						lastMsgTime:
-						Date.now(),
-						lastMsg: message
+						lastMsgTime: lastMsgTime,
+						lastMsg: message,
+					}
+				}, {}, function () {
+					usersDB.persistence.compactDatafile()
+				})
+
+			usersDB.update({ _id: userID },
+				{
+					$push: {
+						last5Msgs: message,
+						last5Times: lastMsgTime
+					}
+				}, {}, function () {
+					usersDB.persistence.compactDatafile()
+				})
+			usersDB.update({ _id: userID },
+				{
+					$pop: {
+						last5Msgs: -1,
+						last5Times: -1
 					}
 				}, {}, function () {
 					usersDB.persistence.compactDatafile()
@@ -636,7 +716,8 @@ steamFriends.on('chatStateChange', function (state, userID, serverID, modUserID)
 						{
 							$set: {
 								lastEntrance: Date.now(),
-								banned: false
+								banned: false,
+								bannedBy: null
 							}
 						}, {}, function () {
 							usersDB.persistence.compactDatafile()
@@ -654,8 +735,6 @@ steamFriends.on('chatStateChange', function (state, userID, serverID, modUserID)
 						}, {}, function () {
 							usersDB.persistence.compactDatafile()
 						})
-
-					usersDB.persistence.compactDatafile
 					break;
 				case 4:		//User Disconnected
 					sendDiscordMessage(pcmrDiscordRelay, ["```" + user + " disconnected```"]);
@@ -669,11 +748,25 @@ steamFriends.on('chatStateChange', function (state, userID, serverID, modUserID)
 						}, {}, function () {
 							usersDB.persistence.compactDatafile()
 						})
-					usersDB.persistence.compactDatafile
 					break;
 				case 8:		//User Kicked
 					sendDiscordMessage(pcmrDiscordRelay, ["```" + user + " was kicked by " + modUser + "```"]);
 					logSteamChat(serverID, userID, user, getDateTime(), user + " was kicked by " + modUser)
+
+					var strikes;
+					usersDB.find({ _id: userID }, function (err, docs) {
+						strikes = docs[0].strikes;
+					})
+
+					strikes++;
+					usersDB.update({ _id: userID },
+						{
+							$set: {
+								strikes: strikes
+							}
+						}, {}, function () {
+							usersDB.persistence.compactDatafile()
+						})
 					break;
 				case 16:	//User Banned
 					sendDiscordMessage(pcmrDiscordRelay, ["```" + user + " was banned by " + modUser + "```"]);
@@ -689,7 +782,7 @@ steamFriends.on('chatStateChange', function (state, userID, serverID, modUserID)
 						}, {}, function () {
 							usersDB.persistence.compactDatafile()
 						})
-					usersDB.persistence.compactDatafile
+
 					break;
 				case 4096:
 				case 8192:
@@ -1104,6 +1197,25 @@ function richardKiester() {
 	for (var i in files) {
 		if (!files.hasOwnProperty(i)) continue;
 		var name = dickbuttFolder + '/' + files[i];
+		if (!fs.statSync(name).isDirectory()) {
+			fileList.push(name);
+		}
+	}
+
+	var imageID = Math.floor((Math.random() * fileList.length) + 1);
+	return fileList[imageID];
+}
+
+//###DEUS VULT###
+function deusVult() {
+	var deusVult = haggisBotPath + "deusVult/";
+	var files = fs.readdirSync(deusVult);
+
+	fileList = [];
+
+	for (var i in files) {
+		if (!files.hasOwnProperty(i)) continue;
+		var name = deusVult + '/' + files[i];
 		if (!fs.statSync(name).isDirectory()) {
 			fileList.push(name);
 		}
