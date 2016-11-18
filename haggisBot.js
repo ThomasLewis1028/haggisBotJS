@@ -29,6 +29,9 @@ var Cleverbot = require('cleverbot-node');
 cleverbot = new Cleverbot;
 
 var fs = require('fs');
+var request = require('request');
+var he = require('he');
+
 
 //Paths
 var haggisBotPath = discordProperties.haggisBotPath;
@@ -157,6 +160,20 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 				var mm = yyyy_mm_dd[1];
 				var dd = yyyy_mm_dd[2];
 				logRetrieve(channelID, userID, yyyy, mm, dd);
+			}
+
+			if (/^!getBanInfo$/i.test(messageArray[0]) && messageArray.length == 2){
+				var userCheck = messageArray[1];
+				usersDB.find({ _id: userCheck }, function (err, docs) {
+					sendDiscordMessage(channelID, ["```" + docs[0].name + " - " + userCheck + 
+					"\nBanned By " + docs[0].bannedBy + " on " + docs[0].bannedOn + 
+					"\n\nLast Five Messages: \n - " + 
+					docs[0].last5Msgs[0] + "\n\n - " +
+					docs[0].last5Msgs[1] + "\n\n - " +
+					docs[0].last5Msgs[2] + "\n\n - " +
+					docs[0].last5Msgs[3] + "\n\n - " +
+					docs[0].last5Msgs[4] + "```"]);
+				})
 			}
 		}
 
@@ -403,6 +420,12 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 		var last5Times
 		var isMod = false;
 
+		testForURL(message, function (extractedURL, extra) {
+			visitURL(extractedURL, function(isJSON, title, streamerInfo){
+				var finalMessage;
+				sendSteamMessage(serverID, user + " posted: " + title)
+			})
+		});
 
 		for (i = 0; i < steamModIDs.length; i++) {
 			if (userID == steamModIDs[i]["modID"]) {
@@ -414,7 +437,6 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 		if (!isMod) {
 			usersDB.find({ _id: userID }, function (err, docs) {
 				last5Times = docs[0].last5Times
-  				console.log("Local Var 1\n"+last5Times)
 
 				// Kick or ban if sending messages too fast
 				if (last5Times[4] - last5Times[0] < 3000) {
@@ -425,8 +447,10 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 						if (strikes < 3) {
 							strikes++;
 							steamFriends.kick(serverID, userID)
-							sendSteamMessage(userID, "Please don't spam the chat");
-							sendSteamMessage(userID, "You have " + strikes + " strikes")
+							// sendSteamMessage(userID, "Please don't spam the chat");
+							// sendSteamMessage(userID, "You have " + strikes + " strikes")
+							console.log(user + " was given a strike for spamming")
+							console.log(last5Times[4] - last5Times[0])
 
 							usersDB.update({ _id: userID },
 								{
@@ -437,13 +461,17 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 									usersDB.persistence.compactDatafile()
 								})
 						} else {
-							sendSteamMessage(userID, "You were banned for sending too many messages" +
-								" characters and received " + strikes + " strikes already");
+							// sendSteamMessage(userID, "You were banned for sending too many messages" +
+								// " characters and received " + strikes + " strikes already");
+							console.log(user + " was given a ban for spamming")
 							steamFriends.ban(serverID, userID);
 							usersDB.update({ _id: userID },
 								{
 									$set: {
-										strikes: 0
+										banned: true,
+										strikes: 0,
+										bannedBy: "Botfart",
+										bannedOn: getDateTime()
 									}
 								}, {}, function () {
 									usersDB.persistence.compactDatafile()
@@ -481,7 +509,10 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 					usersDB.update({ _id: userID },
 						{
 							$set: {
-								strikes: 0
+								banned: true,
+								strikes: 0,
+								bannedBy: "Botfart",
+								bannedOn: getDateTime()
 							}
 						}, {}, function () {
 							usersDB.persistence.compactDatafile()
@@ -552,7 +583,7 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 		//Steam mod call
 		if (isMod) {
 			if (/^!(jk|k|b|bid)$/i.test(messageArray[0])) {
-			steamModCommands(userID, messageArray, serverID);	
+				steamModCommands(userID, messageArray, serverID);	
 			}
 		}
 
@@ -753,18 +784,6 @@ steamFriends.on('chatStateChange', function (state, userID, serverID, modUserID)
 				case 16:	//User Banned
 					sendDiscordMessage(pcmrDiscordRelay, ["```" + user + " was banned by " + modUser + "```"]);
 					logSteamChat(serverID, userID, user, getDateTime(), user + " was banned by " + modUser)
-
-					usersDB.update({ _id: userID },
-						{
-							$set: {
-								banned: true,
-								bannedBy: modUser,
-								strikes: 0
-							}
-						}, {}, function () {
-							usersDB.persistence.compactDatafile()
-						})
-
 					break;
 				case 4096:
 				case 8192:
@@ -850,7 +869,8 @@ steamFriends.on('friendMsg', function (userID, message, type) {
 
 //###STEAM MOD COMMANDS###
 function steamModCommands(modUserID, messageArray, serverID) {
-	var user;
+	var userID;
+	var modUser = steamFriends.personaStates[modUserID].player_name
 	var currUserIDList = Object.keys(steamFriends.chatRooms[pcmrSteamGroup]);
 	var re = RegExp(messageArray[1], "i")
 	var length = currUserIDList.length
@@ -861,13 +881,13 @@ function steamModCommands(modUserID, messageArray, serverID) {
 
 	for (i = length; i < currUserIDList.length; i++) {
 		if (re.test(currUserIDList[i])) {
-			user = currUserIDList[i - length]
+			userID = currUserIDList[i - length]
 			break
 		}
 	}
 
 	if (/^!jk$/i.test(messageArray[0])) {
-		return steamFriends.kick(serverID, user)
+		return steamFriends.kick(serverID, userID)
 	}
 
 	if (/^!k$/i.test(messageArray[0])) {
@@ -886,14 +906,36 @@ function steamModCommands(modUserID, messageArray, serverID) {
 				usersDB.persistence.compactDatafile()
 			})
 
-		return steamFriends.kick(serverID, user)
+		return steamFriends.kick(serverID, userID)
 	}
 
 	if (/^!b$/i.test(messageArray[0])) {
-		return steamFriends.kick(serverID, user)
+		usersDB.update({ _id: userID },
+			{
+				$set: {
+					banned: true,
+					bannedBy: modUser,
+					bannedOn: getDateTime(),
+					strikes: 0
+				}
+			}, {}, function () {
+				usersDB.persistence.compactDatafile()
+			})
+		return steamFriends.kick(serverID, userID)
 	}
 
 	if (/^!bid$/i.test(messageArray[0])) {
+		usersDB.update({ _id: userID },
+			{
+				$set: {
+					banned: true,
+					bannedBy: modUser,
+					bannedOn: getDateTime(),
+					strikes: 0
+				}
+			}, {}, function () {
+				usersDB.persistence.compactDatafile()
+			})
 		return steamFriends.ban(serverID, messageArray[1]);
 	}
 }
@@ -968,12 +1010,13 @@ function addUser(userID, user) {
 		lastMsgTime: null,
 		lastMsg: null,
 		last5Msgs: [null, null, null, null, null],
-		last5Times: [null, null, null, null, null],
+		last5Times: [0, 0, 0, 0, 0],
 		lastEntrance: null,
 		lastExit: null,
 		strikes: 0,
 		banned: false,
-		bannedBy: null
+		bannedBy: null,
+		bannedOn: null
 	}
 
 	usersDB.insert(doc, function (err, newDoc) {
@@ -1246,4 +1289,92 @@ function deusVult() {
 
 	var imageID = Math.floor((Math.random() * fileList.length) + 1);
 	return fileList[imageID];
+}
+
+/**
+ * LINKBOT STUFF
+ */
+function searchForGame(forThis, callback) {
+	var resultsArr = [];
+	var gameList = localList.applist.apps;
+
+	for (var i = 0; i < gameList.length; i++) {
+		if (gameList[i].name.toUpperCase().indexOf(forThis.toUpperCase()) > -1) {
+			resultsArr.push(gameList[i]);
+		}
+	}
+
+	resultsArr.sort(function (a, b) {
+		if (a.name.length < b.name.length) {
+			return -1;
+		} else if (a.name.length > b.name.length) {
+			return 1;
+		} else {
+			return 0;
+		}
+	});
+
+	if (resultsArr.length > 0) {
+		callback(resultsArr[0]);
+	}
+}
+
+function testForURL(message, callback) {
+	var exURL;
+	var extra;
+
+	// if (message.startsWith("!linkme ")) {
+	// 	var inputTitle = message.substring(message.indexOf("!linkme ") + 8, message.length);
+
+	// 	updateList(function () {
+	// 		searchForGame(inputTitle, function (resultObj) {
+	// 			message = "http://store.steampowered.com/app/" + resultObj.appid;
+	// 			extra = message;
+	// 		});
+	// 	});
+	// }
+
+	if (message.indexOf('http') > -1) {
+		message.indexOf(" ", message.indexOf("http")) === -1 ? exURL = message.substring(message.indexOf("http"), message.length) : exURL = message.substring(message.indexOf("http"), message.indexOf(" ", message.indexOf("http")));
+		if (exURL.indexOf("://i.imgur.com/") > -1) exURL = exURL.substring(0, exURL.length - 4).replace("i.imgur.com", "imgur.com");
+
+		callback(exURL, extra);
+	}
+}
+
+function visitURL(URL, callback) {
+	var streamArr = [];
+	var maxSize = 10*1024*1024
+	var rt;
+
+	var req = request(URL, function (err, res, body) {
+		if (!err && res.statusCode == 200) {
+			if (body) {
+				try {
+					var streamerInfo = JSON.parse(body);
+					rt = true;
+					callback(true, null, streamerInfo);
+				} catch (e) {
+					if (body.indexOf('<title>') == -1) {
+					} else {
+						var title = he.decode(body.substring(body.indexOf('<title>') + 7, body.indexOf('</title>'))).trim();
+						rt = true;
+						callback(false, title);
+					}
+				}
+			}
+		}
+	}).on('data', function (chunk) {
+		streamArr += chunk;
+		if (streamArr.length > maxSize) {
+			logError(getDateTime(), "error", "The request was larger than " + maxSize);
+			req.abort();
+		}
+		if (!rt) {
+			rt = setTimeout(function () {
+				logError(getDateTime(), "error", "Took over 2.5 seconds to parse page.");
+				req.abort();
+			}, 2500);
+		}
+	});
 }
