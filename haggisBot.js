@@ -1,7 +1,12 @@
+//Server settings
 var discordProperties = require('/home/thomas/discordBot/haggisBotJS/haggisBotProperties.json');
-// var discordProperties = require('D:\\Projects\\WebstormProjects\\haggisBotJS\\haggisBotProperties.json');
 var steamProperties = require('/home/thomas/discordBot/haggisBotJS/steamBotProperties.json');
+//Desktop Settings
+// var discordProperties = require('D:\\Projects\\WebstormProjects\\haggisBotJS\\haggisBotProperties.json');
 // var steamProperties = require('D:\\Projects\\WebstormProjects\\haggisBotJS\\haggisBotProperties.json');
+//Laptop settings
+// var discordProperties = require('C:\\Projects\\WebstormProjects\\haggisBotJS\\haggisBotProperties.json');
+// var steamProperties = require('C:\\Projects\\WebstormProjects\\haggisBotJS\\steamBotProperties.json');
 
 var Discord = require('discord.io');
 var bot = new Discord.Client({
@@ -24,7 +29,8 @@ steamClient.on('connected', function () {
 
 var Datastore = require('nedb'),
 	usersDB = new Datastore('/home/thomas/discordBot/haggisBotJS/databases/users.db');
-// usersDB = new Datastore('D:\\Projects\\WebstormProjects\\haggisBotJS\\databases\\users.db');
+	// usersDB = new Datastore('D:\\Projects\\WebstormProjects\\haggisBotJS\\databases\\users.db');
+	// usersDB = new Datastore('C:\\Projects\\WebstormProjects\\haggisBotJS\\databases\\users.db');
 
 usersDB.loadDatabase();
 
@@ -438,9 +444,7 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 		}
 
 		if (serverID == pcmrSteamGroup) {
-			if (isUserListed(userID) == false) {
-				addUser(userID, user)
-			}
+			isUserListed(userID)
 
 			usersDB.update({_id: userID},
 				{
@@ -472,60 +476,87 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 				});
 		}
 
+		//###REDDIT & SEARCH###
+		if (/^\/r\//i.test(messageArray[0])) {
+			var redditURL = "https://www.reddit.com";
+
+			if (messageArray.length == 1) {
+				redditURL = redditURL.concat(message);
+				sendSteamMessage(serverID, redditURL);
+			} else if (messageArray.length > 1) {
+				redditURL = redditURL.concat(messageArray[0]);
+				redditURL = redditURL.concat("/search?q=");
+
+				for (i = 1; i < messageArray.length; i++) {
+					redditURL = redditURL.concat(messageArray[i]);
+
+					if (i != messageArray.length - 1) {
+						redditURL = redditURL.concat("+");
+					}
+				}
+
+				redditURL = redditURL.concat("&restrict_sr=on&sort=relevance&t=all");
+				sendSteamMessage(serverID, redditURL);
+			}
+		}
+
 		//Stuff only cared about if the user isn't a mod
 		if (!isMod) {
+			isUserListed(userID, user);
 			usersDB.find({_id: userID}, function (err, docs) {
-				last5Times = docs[0].last5Times;
+				if(docs[0].last5Times.length != 0) {
+					last5Times = docs[0].last5Times;
 
-				// Kick or ban if sending messages too fast
-				if (last5Times[4] - last5Times[0] < 3000) {
-					var strikes;
-					usersDB.find({_id: userID}, function (err, docs) {
-						strikes = docs[0].strikes;
+					// Kick or ban if sending messages too fast
+					if (last5Times[4] - last5Times[0] < 3000) {
+						var strikes;
+						usersDB.find({_id: userID}, function (err, docs) {
+							strikes = docs[0].strikes;
 
-						if (strikes < 3) {
-							strikes++;
-							steamFriends.kick(serverID, userID);
-							// sendSteamMessage(userID, "Please don't spam the chat");
-							// sendSteamMessage(userID, "You have " + strikes + " strikes")
-							console.log(user + " was given a strike for spamming");
-							console.log(last5Times[4] + " - " + last5Times[0] + " = " + last5Times[4] - last5Times[0]);
+							if (strikes < 3) {
+								strikes++;
+								steamFriends.kick(serverID, userID);
+								// sendSteamMessage(userID, "Please don't spam the chat");
+								// sendSteamMessage(userID, "You have " + strikes + " strikes")
+								console.log(user + " was given a strike for spamming");
+								console.log(last5Times[4] + " - " + last5Times[0] + " = " + last5Times[4] - last5Times[0]);
 
-							usersDB.update({_id: userID},
-								{
-									$set: {
-										strikes: strikes
-									}
-								}, {}, function () {
-									usersDB.persistence.compactDatafile()
-								})
-						} else {
-							// sendSteamMessage(userID, "You were banned for sending too many messages" +
-							// " characters and received " + strikes + " strikes already");
-							console.log(user + " was given a ban for spamming");
-							steamFriends.ban(serverID, userID);
-							usersDB.update({_id: userID},
-								{
-									$set: {
-										banned: true,
-										strikes: 0,
-										bannedBy: "Botfart",
-										bannedOn: getDateTime()
-									}
-								}, {}, function () {
-									usersDB.persistence.compactDatafile()
-								})
-						}
-					})
+								usersDB.update({_id: userID},
+									{
+										$set: {
+											strikes: strikes
+										}
+									}, {}, function () {
+										usersDB.persistence.compactDatafile()
+									})
+							} else {
+								// sendSteamMessage(userID, "You were banned for sending too many messages" +
+								// " characters and received " + strikes + " strikes already");
+								console.log(user + " was given a ban for spamming");
+								steamFriends.ban(serverID, userID);
+								usersDB.update({_id: userID},
+									{
+										$set: {
+											banned: true,
+											strikes: 0,
+											bannedBy: "Botfart",
+											bannedOn: getDateTime()
+										}
+									}, {}, function () {
+										usersDB.persistence.compactDatafile()
+									})
+							}
+						})
+					}
 				}
-			})
+			});
 
 			//Kick or ban if more than 500 characters is sent
 			if (message.length > 500) {
 				var strikes;
 				usersDB.find({_id: userID}, function (err, docs) {
 					strikes = docs[0].strikes;
-				})
+				});
 
 				if (strikes < 3) {
 					strikes++;
@@ -736,9 +767,7 @@ steamFriends.on('chatStateChange', function (state, userID, serverID, modUserID)
 		var modUser = steamFriends.personaStates[modUserID].player_name;
 		lastSteamUserId = botfartSteamID;
 
-		if (isUserListed(userID) == false) {
-			addUser(userID, user)
-		}
+		isUserListed(userID)
 
 		if (serverID == pcmrSteamGroup) {
 			switch (state) {
@@ -838,6 +867,7 @@ function logSteamChat(serverID, userID, user, time, message) {
 	dd = (dd < 10 ? "0" : "") + dd;
 
 	var path = haggisBotPath + "logs/steam/";
+	// var path = "C:\\Projects\\WebstormProjects\\haggisBotJS\\logs\\steam\\";
 	var fileName = yyyy + "-" + mm + "-" + dd + ".txt";
 
 	var logContent = yyyy + "-" + mm + "-" + dd + "-" + time + "\r\n"
@@ -1002,8 +1032,12 @@ function logError(time, err) {
 
 //Is user listed
 function isUserListed(userID) {
-	return (usersDB.find({_id: userID}, function (err, docs) {
-	}) == null)
+	(usersDB.find({_id: userID}, function (err, docs) {
+		return;
+	}));
+
+	var user = steamFriends.personaStates[userID].player_name;
+	addUser(userID, user)
 }
 
 function addUser(userID, user) {
