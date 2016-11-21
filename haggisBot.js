@@ -1,7 +1,7 @@
-// var discordProperties = require('D:\\Projects\\WebstormProjects\\haggisBotJS\\haggisBotProperties.json');
 var discordProperties = require('/home/thomas/discordBot/haggisBotJS/haggisBotProperties.json');
-// var steamProperties = require('D:\\Projects\\WebstormProjects\\haggisBotJS\\haggisBotProperties.json');
+// var discordProperties = require('D:\\Projects\\WebstormProjects\\haggisBotJS\\haggisBotProperties.json');
 var steamProperties = require('/home/thomas/discordBot/haggisBotJS/steamBotProperties.json');
+// var steamProperties = require('D:\\Projects\\WebstormProjects\\haggisBotJS\\haggisBotProperties.json');
 
 var Discord = require('discord.io');
 var bot = new Discord.Client({
@@ -23,8 +23,8 @@ steamClient.on('connected', function () {
 });
 
 var Datastore = require('nedb'),
-	// usersDB = new Datastore('D:\\Projects\\WebstormProjects\\haggisBotJS\\databases\\users.db');
 	usersDB = new Datastore('/home/thomas/discordBot/haggisBotJS/databases/users.db');
+// usersDB = new Datastore('D:\\Projects\\WebstormProjects\\haggisBotJS\\databases\\users.db');
 
 usersDB.loadDatabase();
 
@@ -1002,7 +1002,8 @@ function logError(time, err) {
 
 //Is user listed
 function isUserListed(userID) {
-	return (usersDB.find({_id: userID}, function (err, docs) {}) == null)
+	return (usersDB.find({_id: userID}, function (err, docs) {
+	}) == null)
 }
 
 function addUser(userID, user) {
