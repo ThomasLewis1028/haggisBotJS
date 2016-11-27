@@ -1,12 +1,5 @@
-//Server settings
-var discordProperties = require('/home/thomas/discordBot/haggisBotJS/haggisBotProperties.json');
-var steamProperties = require('/home/thomas/discordBot/haggisBotJS/steamBotProperties.json');
-//Desktop Settings
-// var discordProperties = require('D:\\Projects\\WebstormProjects\\haggisBotJS\\haggisBotProperties.json');
-// var steamProperties = require('D:\\Projects\\WebstormProjects\\haggisBotJS\\haggisBotProperties.json');
-//Laptop settings
-// var discordProperties = require('C:\\Projects\\WebstormProjects\\haggisBotJS\\haggisBotProperties.json');
-// var steamProperties = require('C:\\Projects\\WebstormProjects\\haggisBotJS\\steamBotProperties.json');
+var steamProperties = require('./steamBotProperties.json');
+var discordProperties = require('./haggisBotProperties.json');
 
 var Discord = require('discord.io');
 var bot = new Discord.Client({
@@ -29,8 +22,6 @@ steamClient.on('connected', function () {
 
 var Datastore = require('nedb'),
 	usersDB = new Datastore('/home/thomas/discordBot/haggisBotJS/databases/users.db');
-	// usersDB = new Datastore('D:\\Projects\\WebstormProjects\\haggisBotJS\\databases\\users.db');
-	// usersDB = new Datastore('C:\\Projects\\WebstormProjects\\haggisBotJS\\databases\\users.db');
 
 usersDB.loadDatabase();
 
@@ -66,8 +57,7 @@ var pcmrSteamGroup = steamProperties.pcmrGroup;
 var haggisTestGroup = steamProperties.haggisTestGroup;
 var haggisSteamID = steamProperties.haggisID;
 var botfartSteamID = steamProperties.botfartID;
-var steamModIDs = steamProperties.steamMods;
-var steamModDiscordIDs = steamProperties.steamModDiscordIDs;
+var modIDs = steamProperties.modIDs;
 var lastSteamUserId;
 
 //Ready the Discord Bot
@@ -80,8 +70,9 @@ bot.on("ready", function (rawEvent) {
 		console.log("----------");
 		sendDiscordMessage(haggisDiscordID, ["DiscordBot Reconnected at " + getDateTime()]);
 	} catch (err) {
+		console.log(err + " 0");
 		sendDiscordMessage(haggisDiscordID, ["ERROR: " + err]);
-		logError(getDateTime(), err);
+		logError(getDateTime(), err + " 0");
 	}
 });
 
@@ -131,9 +122,9 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 			logSteamChat(channelID, userID, user, getDateTime(), message);
 
 			if (/^!(jk|k|b|bid)$/i.test(messageArray[0])) {
-				for (i = 0; i < steamModDiscordIDs.length; i++) {
-					if (userID == steamModDiscordIDs[i]["modID"]) {
-						steamModCommands(userID, messageArray, pcmrSteamGroup);
+				for (i = 0; i < modIDs.length; i++) {
+					if (userID == modIDs[i]["discordModID"]) {
+						steamModCommands(modIDs[i]["steamModID"], messageArray, pcmrSteamGroup);
 					}
 				}
 			}
@@ -171,10 +162,12 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 				logRetrieve(channelID, userID, yyyy, mm, dd);
 			}
 
-			if (/^!getBanInfo$/i.test(messageArray[0]) && messageArray.length == 2) {
+			if (/^!getInfo$/i.test(messageArray[0]) && messageArray.length == 2) {
 				var userCheck = messageArray[1];
 				usersDB.find({_id: userCheck}, function (err, docs) {
 					sendDiscordMessage(channelID, ["```" + docs[0].name + " - " + userCheck +
+					"\nBanned: " + docs[0].banned +
+					"\nStrikes: " + docs[0].strikes +
 					"\nBanned By " + docs[0].bannedBy + " on " + docs[0].bannedOn +
 					"\n\nLast Five Messages: \n - " +
 					docs[0].last5Msgs[0] + "\n\n - " +
@@ -184,11 +177,6 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 					docs[0].last5Msgs[4] + "```"]);
 				})
 			}
-		}
-
-		//###DISCORD MOD CALL
-		if (/^!(k|b|bid)$/i.test(messageArray[0])) {
-
 		}
 
 		//###DO IN CERTAIN SERVERS###
@@ -294,25 +282,13 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 				"!faggot \n" +
 				"9/11 \n" +
 				"y \n" +
-				"!discordModCommands \n" +
 				"```"])
-				break;
-			case "!discordModCommands":
-				sendDiscordMessage(channelID, ["```\n" +
-				"!b @<user> \n" +
-				"!k @<user> \n" +
-				"```"]);
 				break;
 		}
 
 		//###PING PONG###
 		if (/^ping$/i.test(message)) {
 			sendDiscordMessage(channelID, ["<@" + userID + "> pong"]);
-		}
-
-		//##DISCORD ADMIN CALL###
-		if (userID == popcheeseID || userID == haggisDiscordID || userID == snazzyBirchID && /^![bk]$/i.test(messageArray[0])) {
-			discordModCommands(user, messageArray, channelID);
 		}
 
 		//###REDDIT & SEARCH###
@@ -415,8 +391,9 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 			sendFiles(channelID, [deusVult()]);
 		}
 	} catch (err) {
+		console.log(err + " 1");
 		sendDiscordMessage(haggisDiscordID, ["ERROR: " + err]);
-		logError(getDateTime(), err);
+		logError(getDateTime(), err + " 1");
 	}
 });
 
@@ -437,14 +414,14 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 			});
 		}
 
-		for (i = 0; i < steamModIDs.length; i++) {
-			if (userID == steamModIDs[i]["modID"]) {
+		for (i = 0; i < modIDs.length; i++) {
+			if (userID == modIDs[i]["steamModID"]) {
 				isMod = true;
 			}
 		}
 
 		if (serverID == pcmrSteamGroup) {
-			isUserListed(userID)
+			isUserListed(userID);
 
 			usersDB.update({_id: userID},
 				{
@@ -482,7 +459,7 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 
 			if (messageArray.length == 1) {
 				redditURL = redditURL.concat(message);
-				sendSteamMessage(serverID, redditURL);
+				sendSteamMessage(serverID, user + " posted: " + redditURL);
 			} else if (messageArray.length > 1) {
 				redditURL = redditURL.concat(messageArray[0]);
 				redditURL = redditURL.concat("/search?q=");
@@ -496,7 +473,7 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 				}
 
 				redditURL = redditURL.concat("&restrict_sr=on&sort=relevance&t=all");
-				sendSteamMessage(serverID, redditURL);
+				sendSteamMessage(serverID, user + " posted: " + redditURL);
 			}
 		}
 
@@ -504,7 +481,7 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 		if (!isMod) {
 			isUserListed(userID, user);
 			usersDB.find({_id: userID}, function (err, docs) {
-				if(docs[0].last5Times.length != 0) {
+				if (docs[0].last5Times.length != 0) {
 					last5Times = docs[0].last5Times;
 
 					// Kick or ban if sending messages too fast
@@ -638,8 +615,8 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 			sendSteamMessage(userID, "Pong")
 		}
 	} catch (err) {
-		console.log(err);
-		logError(getDateTime(), err);
+		console.log(err + " 2");
+		logError(getDateTime(), err + " 2");
 	}
 });
 
@@ -780,7 +757,8 @@ steamFriends.on('chatStateChange', function (state, userID, serverID, modUserID)
 							$set: {
 								lastEntrance: Date.now(),
 								banned: false,
-								bannedBy: null
+								bannedBy: null,
+								bannedOn: null
 							}
 						}, {}, function () {
 							usersDB.persistence.compactDatafile()
@@ -797,7 +775,7 @@ steamFriends.on('chatStateChange', function (state, userID, serverID, modUserID)
 							}
 						}, {}, function () {
 							usersDB.persistence.compactDatafile()
-						})
+						});
 					break;
 				case 4:		//User Disconnected
 					sendDiscordMessage(pcmrDiscordRelay, ["```" + user + " disconnected```"]);
@@ -817,6 +795,24 @@ steamFriends.on('chatStateChange', function (state, userID, serverID, modUserID)
 					logSteamChat(serverID, userID, user, getDateTime(), user + " was kicked by " + modUser);
 					break;
 				case 16:	//User Banned
+					if (modUserID != botfartSteamID) {
+						usersDB.update({_id: userID},
+							{
+								$set: {
+									banned: true,
+									bannedBy: modUser,
+									bannedOn: getDateTime(),
+									strikes: 0
+								}
+							}, {}, function () {
+								usersDB.persistence.compactDatafile()
+							});
+
+						for (i = 0; i < modIDs.length; i++) {
+							sendSteamMessage(modIDs[i][steamModID], user + " was banned by " + modUser);
+						}
+					}
+
 					sendDiscordMessage(pcmrDiscordRelay, ["```" + user + " was banned by " + modUser + "```"]);
 					logSteamChat(serverID, userID, user, getDateTime(), user + " was banned by " + modUser);
 					break;
@@ -830,9 +826,9 @@ steamFriends.on('chatStateChange', function (state, userID, serverID, modUserID)
 			}
 		}
 	} catch (err) {
-		console.log(err);
+		console.log(err + " 3");
 		sendDiscordMessage(haggisDiscordID, [getDateTime() + "\n" + err]);
-		logError(getDateTime(), err);
+		logError(getDateTime(), err + " 3");
 	}
 });
 
@@ -845,15 +841,16 @@ function sendSteamMessage(serverID, message) {
 steamFriends.on('chatInvite', function (chatID, chatName, userID) {
 	try {
 		if (chatID == pcmrSteamGroup || chatID == haggisTestGroup) {
-			for (i = 0; i < steamModIDs.length; i++) {
-				if (userID == steamModIDs[i]["modID"]) {
+			for (i = 0; i < modIDs.length; i++) {
+				if (userID == modIDs[i]["steamModID"]) {
 					steamFriends.joinChat(chatID);
 				}
 			}
 		}
 	} catch (err) {
+		console.log(err + " 4");
 		sendDiscordMessage(haggisDiscordID, [getDateTime() + "\n" + err]);
-		logError(getDateTime(), err);
+		logError(getDateTime(), err + " 4");
 	}
 });
 
@@ -885,6 +882,7 @@ function logRetrieve(channelID, userID, yyyy, mm, dd) {
 		sendDiscordMessage(channelID, ["<@" + userID + ">"]);
 		sendFiles(channelID, [haggisBotPath + "logs/steam/" + yyyy + "-" + mm + "-" + dd + ".txt"]);
 	} catch (err) {
+		console.log(err + " 5");
 		sendDiscordMessage(channelID, [err]);
 	}
 }
@@ -898,14 +896,16 @@ steamFriends.on('friendMsg', function (userID, message, type) {
 
 		return;
 	} catch (err) {
-		logError(getDateTime(), err);
+		console.log(err + " 5");
+		logError(getDateTime(), err + " 5");
 		sendDiscordMessage(haggisDiscordID, [err]);
 	}
-})
+});
 
 //###STEAM MOD COMMANDS###
 function steamModCommands(modUserID, messageArray, serverID) {
 	var userID;
+	var user;
 	var modUser = steamFriends.personaStates[modUserID].player_name;
 	var currUserIDList = Object.keys(steamFriends.chatRooms[pcmrSteamGroup]);
 	var re = RegExp(messageArray[1], "i");
@@ -918,7 +918,8 @@ function steamModCommands(modUserID, messageArray, serverID) {
 	for (i = length; i < currUserIDList.length; i++) {
 		if (re.test(currUserIDList[i])) {
 			userID = currUserIDList[i - length];
-			break
+			user = currUserIDList[i];
+			break;
 		}
 	}
 
@@ -930,7 +931,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 		var strikes;
 		usersDB.find({_id: userID}, function (err, docs) {
 			strikes = docs[0].strikes;
-		})
+		});
 
 		strikes++;
 		usersDB.update({_id: userID},
@@ -940,9 +941,9 @@ function steamModCommands(modUserID, messageArray, serverID) {
 				}
 			}, {}, function () {
 				usersDB.persistence.compactDatafile()
-			})
+			});
 
-		return steamFriends.kick(serverID, userID)
+		return steamFriends.kick(serverID, userID);
 	}
 
 	if (/^!b$/i.test(messageArray[0])) {
@@ -956,8 +957,11 @@ function steamModCommands(modUserID, messageArray, serverID) {
 				}
 			}, {}, function () {
 				usersDB.persistence.compactDatafile()
-			})
-		return steamFriends.kick(serverID, userID)
+			});
+		for (i = 0; i < modIDs.length; i++) {
+			sendSteamMessage(modIDs[i][steamModID], user + " was banned by " + modUser);
+		}
+		return steamFriends.ban(serverID, userID);
 	}
 
 	if (/^!bid$/i.test(messageArray[0])) {
@@ -971,11 +975,20 @@ function steamModCommands(modUserID, messageArray, serverID) {
 				}
 			}, {}, function () {
 				usersDB.persistence.compactDatafile()
-			})
+			});
+		for (i = 0; i < modIDs.length; i++) {
+			sendSteamMessage(modIDs[i][steamModID], user + " was banned by " + modUser);
+		}
 		return steamFriends.ban(serverID, messageArray[1]);
 	}
 }
 
+//###AUTO RECONNECT###
+steamClient.on('disconnect', function () {
+	{
+		steamClient.connect(); //Auto reconnect
+	}
+});
 /**#########################################################
  * Shared functions
  * functions used by both discord and steam
@@ -1417,12 +1430,12 @@ function visitURL(URL, callback) {
 	}).on('data', function (chunk) {
 		streamArr += chunk;
 		if (streamArr.length > maxSize) {
-			logError(getDateTime(), "error", "The request was larger than " + maxSize);
+			// logError(getDateTime(), "error The request was larger than " + maxSize);
 			req.abort();
 		}
 		if (!rt) {
 			rt = setTimeout(function () {
-				logError(getDateTime(), "error", "Took over 2.5 seconds to parse page.");
+				// logError(getDateTime(), "error Took over 2.5 seconds to parse page.");
 				req.abort();
 			}, 2500);
 		}
