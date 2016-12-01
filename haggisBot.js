@@ -493,8 +493,8 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 							if (strikes < 3) {
 								strikes++;
 								steamFriends.kick(serverID, userID);
-								// sendSteamMessage(userID, "Please don't spam the chat");
-								// sendSteamMessage(userID, "You have " + strikes + " strikes")
+								sendSteamMessage(userID, "Please don't spam the chat");
+								sendSteamMessage(userID, "You have " + strikes + " strikes");
 								console.log(user + " was given a strike for spamming");
 								console.log(last5Times[4] + " - " + last5Times[0] + " = " + last5Times[4] - last5Times[0]);
 
@@ -507,8 +507,8 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 										usersDB.persistence.compactDatafile()
 									})
 							} else {
-								// sendSteamMessage(userID, "You were banned for sending too many messages" +
-								// " characters and received " + strikes + " strikes already");
+								sendSteamMessage(userID, "You were banned for sending too many messages" +
+									" characters and received " + strikes + " strikes already");
 								console.log(user + " was given a ban for spamming");
 								steamFriends.ban(serverID, userID);
 								usersDB.update({_id: userID},
@@ -521,7 +521,12 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 										}
 									}, {}, function () {
 										usersDB.persistence.compactDatafile()
-									})
+									});
+
+								for (i = 0; i < modIDs.length; i++) {
+									sendSteamMessage(modIDs[i]["steamModID"], 
+										user + "(" + userID + ")" + " was banned for spamming");
+								}
 							}
 						})
 					}
@@ -563,7 +568,12 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 							}
 						}, {}, function () {
 							usersDB.persistence.compactDatafile()
-						})
+						});
+
+					for (i = 0; i < modIDs.length; i++) {
+						sendSteamMessage(modIDs[i]["steamModID"],
+							user + " was banned for sending more than 500 characters");
+					}
 				}
 			}
 		}
@@ -613,6 +623,11 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 		//Ping Pong
 		if (/^!ping$/i.test(message)) {
 			sendSteamMessage(userID, "Pong")
+		}
+
+		//Rules
+		if (/^!rules$/i.test(message)) {
+			sendSteamMessage(serverID, "https://www.reddit.com/r/pcmasterrace/wiki/steamchat")
 		}
 	} catch (err) {
 		console.log(err + " 2");
@@ -744,7 +759,7 @@ steamFriends.on('chatStateChange', function (state, userID, serverID, modUserID)
 		var modUser = steamFriends.personaStates[modUserID].player_name;
 		lastSteamUserId = botfartSteamID;
 
-		isUserListed(userID)
+		isUserListed(userID);
 
 		if (serverID == pcmrSteamGroup) {
 			switch (state) {
@@ -793,6 +808,22 @@ steamFriends.on('chatStateChange', function (state, userID, serverID, modUserID)
 				case 8:		//User Kicked
 					sendDiscordMessage(pcmrDiscordRelay, ["```" + user + " was kicked by " + modUser + "```"]);
 					logSteamChat(serverID, userID, user, getDateTime(), user + " was kicked by " + modUser);
+					if (modUserID != botfartSteamID) {
+						usersDB.find({_id: userID}, function (err, docs) {
+							var strikes;
+							strikes = docs[0].strikes;
+							strikes++;
+
+							usersDB.update({_id: userID},
+								{
+									$set: {
+										strikes: strikes
+									}
+								}, {}, function () {
+									usersDB.persistence.compactDatafile()
+								});
+						});
+					}
 					break;
 				case 16:	//User Banned
 					if (modUserID != botfartSteamID) {
@@ -809,7 +840,7 @@ steamFriends.on('chatStateChange', function (state, userID, serverID, modUserID)
 							});
 
 						for (i = 0; i < modIDs.length; i++) {
-							sendSteamMessage(modIDs[i][steamModID], user + " was banned by " + modUser);
+							sendSteamMessage(modIDs[i]["steamModID"], user + " was banned by " + modUser);
 						}
 					}
 
@@ -959,7 +990,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 				usersDB.persistence.compactDatafile()
 			});
 		for (i = 0; i < modIDs.length; i++) {
-			sendSteamMessage(modIDs[i][steamModID], user + " was banned by " + modUser);
+			sendSteamMessage(modIDs[i]["steamModID"], user + "(" + userID + ")" + " was banned by " + modUser);
 		}
 		return steamFriends.ban(serverID, userID);
 	}
@@ -977,7 +1008,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 				usersDB.persistence.compactDatafile()
 			});
 		for (i = 0; i < modIDs.length; i++) {
-			sendSteamMessage(modIDs[i][steamModID], user + " was banned by " + modUser);
+			sendSteamMessage(modIDs[i]["steamModID"], user + "(" + userID + ")" + " was banned by " + modUser);
 		}
 		return steamFriends.ban(serverID, messageArray[1]);
 	}
@@ -1407,7 +1438,7 @@ function testForURL(message, callback) {
 
 function visitURL(URL, callback) {
 	var streamArr = [];
-	var maxSize = 10 * 1024 * 1024
+	var maxSize = 10 * 1024 * 1024;
 	var rt;
 
 	var req = request(URL, function (err, res, body) {
