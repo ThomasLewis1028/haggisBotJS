@@ -22,6 +22,7 @@ steamClient.on('connected', function () {
 
 var Datastore = require('nedb'),
 	usersDB = new Datastore('/home/thomas/discordBot/haggisBotJS/databases/users.db');
+// usersDB = new Datastore('D:\\Projects\\WebstormProjects\\haggisBotJS\\databases\\users.db')
 
 usersDB.loadDatabase();
 
@@ -36,6 +37,7 @@ var he = require('he');
 //Paths
 var haggisBotPath = discordProperties.haggisBotPath;
 var musicBotPath = discordProperties.musicBotPath;
+// var haggisBotPath = 'D:\\Projects\\WebstormProjects\\haggisBotJS\\';
 //Discord Information
 var haggisDiscordID = discordProperties.haggisID;
 var botfartDiscordID = discordProperties.botfartID;
@@ -421,7 +423,9 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 		}
 
 		if (serverID == pcmrSteamGroup) {
-			isUserListed(userID);
+			if (!isUserListed(userID)) {
+				addUser(userID, user);
+			}
 
 			usersDB.update({_id: userID},
 				{
@@ -479,7 +483,9 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 
 		//Stuff only cared about if the user isn't a mod
 		if (!isMod) {
-			isUserListed(userID, user);
+			if (!isUserListed(userID)) {
+				addUser(userID, user);
+			}
 			usersDB.find({_id: userID}, function (err, docs) {
 				if (docs[0].last5Times.length != 0) {
 					last5Times = docs[0].last5Times;
@@ -524,7 +530,7 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 									});
 
 								for (i = 0; i < modIDs.length; i++) {
-									sendSteamMessage(modIDs[i]["steamModID"], 
+									sendSteamMessage(modIDs[i]["steamModID"],
 										user + "(" + userID + ")" + " was banned for spamming");
 								}
 							}
@@ -759,7 +765,9 @@ steamFriends.on('chatStateChange', function (state, userID, serverID, modUserID)
 		var modUser = steamFriends.personaStates[modUserID].player_name;
 		lastSteamUserId = botfartSteamID;
 
-		isUserListed(userID);
+		if (!isUserListed(userID)) {
+			addUser(userID, user);
+		}
 
 		if (serverID == pcmrSteamGroup) {
 			switch (state) {
@@ -840,12 +848,12 @@ steamFriends.on('chatStateChange', function (state, userID, serverID, modUserID)
 							});
 
 						for (i = 0; i < modIDs.length; i++) {
-							sendSteamMessage(modIDs[i]["steamModID"], user + " was banned by " + modUser);
+							sendSteamMessage(modIDs[i]["steamModID"], user + " (" + userID + ")" + " was banned by " + modUser);
 						}
 					}
 
 					sendDiscordMessage(pcmrDiscordRelay, ["```" + user + " was banned by " + modUser + "```"]);
-					logSteamChat(serverID, userID, user, getDateTime(), user + " was banned by " + modUser);
+					logSteamChat(serverID, userID, user, getDateTime(), user + " (" + userID + ")" + " was banned by " + modUser);
 					break;
 				case 4096:
 				case 8192:
@@ -942,6 +950,43 @@ function steamModCommands(modUserID, messageArray, serverID) {
 	var re = RegExp(messageArray[1], "i");
 	var length = currUserIDList.length;
 
+	if (/^!bid$/i.test(messageArray[0])) {
+		userID = messageArray[1];
+		console.log(userID);
+
+
+		usersDB.find({_id: userID}, function (err, docs) {
+			if (docs.length > 0) {
+				user = docs[0].name;
+
+				usersDB.update({_id: userID},
+					{
+						$set: {
+							banned: true,
+							bannedBy: modUser,
+							bannedOn: getDateTime(),
+							strikes: 0
+						}
+					}, {}, function () {
+						usersDB.persistence.compactDatafile()
+					});
+
+				for (i = 0; i < modIDs.length; i++) {
+					sendSteamMessage(modIDs[i]["steamModID"], user + " (" + userID + ")" + " was banned by " + modUser);
+				}
+
+			} else {
+				for (i = 0; i < modIDs.length; i++) {
+					sendSteamMessage(modIDs[i]["steamModID"], "User not defined - " + userID + " was banned by " + modUser);
+
+				}
+			}
+
+		});
+
+		return steamFriends.ban(serverID, userID);
+	}
+
 	for (i = 0; i < length; i++) {
 		currUserIDList.push(steamFriends.personaStates[currUserIDList[i]].player_name);
 	}
@@ -962,18 +1007,16 @@ function steamModCommands(modUserID, messageArray, serverID) {
 		var strikes;
 		usersDB.find({_id: userID}, function (err, docs) {
 			strikes = docs[0].strikes;
+			strikes++;
+			usersDB.update({_id: userID},
+				{
+					$set: {
+						strikes: strikes
+					}
+				}, {}, function () {
+					usersDB.persistence.compactDatafile()
+				});
 		});
-
-		strikes++;
-		usersDB.update({_id: userID},
-			{
-				$set: {
-					strikes: strikes
-				}
-			}, {}, function () {
-				usersDB.persistence.compactDatafile()
-			});
-
 		return steamFriends.kick(serverID, userID);
 	}
 
@@ -993,24 +1036,6 @@ function steamModCommands(modUserID, messageArray, serverID) {
 			sendSteamMessage(modIDs[i]["steamModID"], user + "(" + userID + ")" + " was banned by " + modUser);
 		}
 		return steamFriends.ban(serverID, userID);
-	}
-
-	if (/^!bid$/i.test(messageArray[0])) {
-		usersDB.update({_id: userID},
-			{
-				$set: {
-					banned: true,
-					bannedBy: modUser,
-					bannedOn: getDateTime(),
-					strikes: 0
-				}
-			}, {}, function () {
-				usersDB.persistence.compactDatafile()
-			});
-		for (i = 0; i < modIDs.length; i++) {
-			sendSteamMessage(modIDs[i]["steamModID"], user + "(" + userID + ")" + " was banned by " + modUser);
-		}
-		return steamFriends.ban(serverID, messageArray[1]);
 	}
 }
 
@@ -1077,11 +1102,8 @@ function logError(time, err) {
 //Is user listed
 function isUserListed(userID) {
 	(usersDB.find({_id: userID}, function (err, docs) {
-		return;
+		return docs.length > 0;
 	}));
-
-	var user = steamFriends.personaStates[userID].player_name;
-	addUser(userID, user)
 }
 
 function addUser(userID, user) {
