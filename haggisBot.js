@@ -26,9 +26,6 @@ var Datastore = require('nedb'),
 
 usersDB.loadDatabase();
 
-var Cleverbot = require('cleverbot-node');
-cleverbot = new Cleverbot;
-
 var fs = require('fs');
 var request = require('request');
 var he = require('he');
@@ -47,7 +44,6 @@ var seraID = discordProperties.seraID;
 var personalDiscordServer = discordProperties.personalDiscordServer;
 var pcmrDiscordServer = discordProperties.pcmrServer;
 var pcmrDiscordRelay = discordProperties.pcmrRelayServer;
-var cleverBotChannel = discordProperties.cleverBotChannel;
 var musicReqChannel = discordProperties.musicReqChannel;
 var pcmrLogRequests = discordProperties.pcmrLogRequests;
 var testingBooth = discordProperties.testingBooth;
@@ -88,10 +84,6 @@ steamClient.on('logOnResponse', function (logonResp) {
 		steamFriends.joinChat(pcmrSteamGroup);
 		sendDiscordMessage(haggisDiscordID, ["SteamBot Reconnected at " + getDateTime()]);
 	}
-});
-
-//Prepare Cleverbot
-Cleverbot.prepare(function () {
 });
 
 //###DO ON DISCORD MESSAGE###
@@ -352,16 +344,6 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 			sendDiscordMessage(channelID, [lmgtfy]);
 		}
 
-		//###CLEVERBOTFART###
-		if (channelID == cleverBotChannel && userID != botfartDiscordID) {
-			cleverbot.write(message, function (response, err) {
-				if (err) {
-					console.log(err);
-				}
-				sendDiscordMessage(channelID, [response.message]);
-			});
-		}
-
 		//###I WON'T LIE###
 		if (/(i).(won't|wont).(lie)/i.test(message)) {
 			sendDiscordMessage(channelID, [":ok_hand: :joy::sob: :laughing::ok_hand: :eggplant: :100: :poop: "]);
@@ -404,6 +386,7 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 	try {
 		var user = steamFriends.personaStates[userID].player_name;
 		var messageArray = message.split(" ");
+		var newlineArray = message.split("\n");
 		var lastMsgTime = Date.now();
 		var last5Times;
 		var isMod = false;
@@ -497,8 +480,6 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 								steamFriends.kick(serverID, userID);
 								sendSteamMessage(userID, "Please don't spam the chat");
 								sendSteamMessage(userID, "You have " + strikes + " strikes");
-								console.log(user + " was given a strike for spamming");
-								console.log(last5Times[4] + " - " + last5Times[0] + " = " + last5Times[4] - last5Times[0]);
 
 								usersDB.update({_id: userID},
 									{
@@ -511,7 +492,8 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 							} else {
 								sendSteamMessage(userID, "You were banned for sending too many messages" +
 									" characters and received " + strikes + " strikes already");
-								console.log(user + " was given a ban for spamming");
+								sendSteamMessage(userID, "For any appeals go to https://www.reddit.com/r/PCMRSteamMods/" +
+									" and message the mods");
 								steamFriends.ban(serverID, userID);
 								usersDB.update({_id: userID},
 									{
@@ -558,6 +540,8 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 					} else {
 						sendSteamMessage(userID, "You were banned for sending more than 500" +
 							" characters and received " + strikes + " strikes already");
+						sendSteamMessage(userID, "For any appeals go to https://www.reddit.com/r/PCMRSteamMods/" +
+							" and message the mods");
 						steamFriends.ban(serverID, userID);
 						usersDB.update({_id: userID},
 							{
@@ -577,6 +561,32 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 						}
 					}
 				});
+			}
+
+			if (message.length > 200 && newlineArray.length > 4){
+
+				for (i = 0; i < modIDs.length; i++) {
+					sendSteamMessage(userID, "You were banned for sending more than 200" +
+						" characters and 5 lines");
+					sendSteamMessage(userID, "For any appeals go to https://www.reddit.com/r/PCMRSteamMods/" +
+						" and message the mods");
+
+					steamFriends.ban(serverID, userID);
+					usersDB.update({_id: userID},
+						{
+							$set: {
+								banned: true,
+								strikes: 0,
+								bannedBy: "Botfart",
+								bannedOn: getDateTime()
+							}
+						}, {}, function () {
+							usersDB.persistence.compactDatafile()
+						});
+
+					sendSteamMessage(modIDs[i]["steamModID"],
+						user + "(" + userID + ") was banned for sending more than 500 characters");
+				}
 			}
 		}
 
@@ -848,6 +858,9 @@ steamFriends.on('chatStateChange', function (state, userID, serverID, modUserID)
 						}
 					}
 
+					sendSteamMessage(userID, "You were banned by the moderators.");
+					sendSteamMessage(userID, "For any appeals go to https://www.reddit.com/r/PCMRSteamMods/" +
+						" and message the mods");
 					sendDiscordMessage(pcmrDiscordRelay, ["```" + user + " was banned by " + modUser + "```"]);
 					logSteamChat(serverID, userID, user, getDateTime(), user + " (" + userID + ")" + " was banned by " + modUser);
 					break;
