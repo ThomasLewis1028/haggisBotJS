@@ -104,14 +104,13 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 			var fileLink = rawEvent.d.attachments[0].url;
 		}
 
-
 		//###INGORE SELF###
 		if (userID === botfartDiscordID) {
 			return;
 		}
 
 		//###RELAY STEAM CHAT###
-		if (channelID == pcmrDiscordRelay && userID != seraID) {
+		if (channelID == pcmrDiscordRelay) {
 			lastSteamUserId = botfartDiscordID;
 			logSteamChat(channelID, userID, user, getDateTime(), message);
 
@@ -391,16 +390,16 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 		var last5Times;
 		var isMod = false;
 
-		if (userID != seraID) {
-			testForURL(message, function (extractedURL, extra) {
-				visitURL(extractedURL, function (isJSON, title, streamerInfo) {
+		testForURL(message, function (extractedURL, extra) {
+			visitURL(extractedURL, function (isJSON, title, streamerInfo) {
+				if (title != "Imgur: The most awesome images on the Internet")
 					sendSteamMessage(serverID, user + " posted: " + title)
-				})
-			});
-		}
+			})
+		});
 
 		isMod = modStatus(userID);
 
+		//Update user database
 		if (serverID == pcmrSteamGroup) {
 			if (!isUserListed(userID)) {
 				addUser(userID, user);
@@ -563,7 +562,7 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 				});
 			}
 
-			if (message.length > 200 && newlineArray.length > 4){
+			if (message.length > 200 && newlineArray.length > 4) {
 
 				for (i = 0; i < modIDs.length; i++) {
 					sendSteamMessage(userID, "You were banned for sending more than 200" +
@@ -616,7 +615,7 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 
 		//Steam mod call
 		if (isMod) {
-			if (/^!(jk|k|ka|kall|b|bid|ubid|ub)$/i.test(messageArray[0])) {
+			if (/^!(jk|k|ka|purge|krand|b|bid|ubid|ub|cs)$/i.test(messageArray[0])) {
 				steamModCommands(userID, messageArray, serverID);
 			}
 		}
@@ -974,9 +973,8 @@ function steamModCommands(modUserID, messageArray, serverID) {
 		}
 	}
 
-
 	if (modStatus(userID))
-		sendSteamMessage(modUserID, "Fuck you stop it");
+		return sendSteamMessage(modUserID, "Fuck you stahp it");
 
 	//Kick
 	if (/^!k$/i.test(messageArray[0])) {
@@ -1013,8 +1011,14 @@ function steamModCommands(modUserID, messageArray, serverID) {
 		});
 	}
 
+	//Kick random
+	if (/^!krand$/i.test(messageArray[0])) {
+		var randUserNum = Math.floor((Math.random() * currUserIDs.length) + 1);
+		steamFriends.kick(serverID, currUserIDs[randUserNum]);
+	}
+
 	//Kick all
-	if (/^!kall/i.test(messageArray[0])) {
+	if (/^!purge/i.test(messageArray[0])) {
 		for (i = 0; i < currUserIDs.length; i++) {
 			steamFriends.kick(serverID, currUserIDs[i]);
 		}
@@ -1047,7 +1051,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 		userID = messageArray[1];
 
 		if (modStatus(userID) || userID == botfartSteamID)
-			sendSteamMessage(modUserID, "Fuck you stahp it");
+			return sendSteamMessage(modUserID, "Fuck you stahp it");
 
 		usersDB.find({_id: userID}, function (err, docs) {
 			if (docs.length > 0) {
@@ -1091,14 +1095,27 @@ function steamModCommands(modUserID, messageArray, serverID) {
 				userID = docs[0]._id;
 				user = docs[0].name;
 
+				usersDB.update({_id: userID},
+					{
+						$set: {
+							banned: false,
+							bannedBy: null,
+							bannedOn: 0,
+							strikes: 0
+						}
+					}, {}, function () {
+						usersDB.persistence.compactDatafile()
+					});
+
 				for (i = 0; i < modIDs.length; i++) {
 					sendSteamMessage(modIDs[i]["steamModID"], user + "(" + userID + ")" + " was unbanned by " + modUser);
 				}
+
+				return steamFriends.unban(serverID, userID);
 			}
 		});
 
 
-		return steamFriends.unban(serverID, userID);
 	}
 
 	//Unban by ID
@@ -1132,9 +1149,20 @@ function steamModCommands(modUserID, messageArray, serverID) {
 				}
 			}
 
+			return steamFriends.unban(serverID, userID);
 		});
+	}
 
-		return steamFriends.unban(serverID, userID);
+	//Clear strikes
+	if (/^!cs$/i.test(messageArray[0])) {
+		usersDB.update({_id: userID},
+			{
+				$set: {
+					strikes: 0
+				}
+			}, {}, function () {
+				usersDB.persistence.compactDatafile()
+			});
 	}
 }
 
