@@ -21,7 +21,8 @@ steamClient.on('connected', function () {
 });
 
 var Datastore = require('nedb'),
-	usersDB = new Datastore('/home/thomas/discordBot/haggisBotJS/databases/users.db');
+	usersDB = new Datastore('/home/thomas/discordBot/haggisBotJS/databases/users.db'),
+	chatGamesDB = new Datastore('/home/thomas/discordBot/haggisBotJS/databases/chatGames.db');
 // usersDB = new Datastore('D:\\Projects\\WebstormProjects\\haggisBotJS\\databases\\users.db')
 
 usersDB.loadDatabase();
@@ -383,6 +384,7 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 //###DO ON STEAM GROUP MESSAGE###
 steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 	try {
+		var currUserIDs = Object.keys(steamFriends.chatRooms[pcmrSteamGroup]);
 		var user = steamFriends.personaStates[userID].player_name;
 		var messageArray = message.split(" ");
 		var newlineArray = message.split("\n");
@@ -613,11 +615,73 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 			}
 		}
 
-		//Steam mod call
-		if (isMod) {
-			if (/^!(jk|k|ka|purge|krand|b|bid|ubid|ub|cs)$/i.test(messageArray[0])) {
-				steamModCommands(userID, messageArray, serverID);
+		//Russian Roulette
+		if (/^!rr$/i.test(message)) {
+			var temp = Math.floor((Math.random() * 100) + 1);
+
+			if (!isMod) {
+				switch (temp) {
+					case 5:
+					case 10:
+					case 15:
+					case 20:
+					case 25:
+					case 30:
+					case 35:
+					case 40:
+					case 45:
+					case 50:
+					case 55:
+					case 60:
+					case 65:
+					case 70:
+					case 75:
+					case 80:
+					case 85:
+					case 90:
+					case 95:
+					case 100:
+						return steamFriends.kick(serverID, userID);
+						break;
+					case 27:
+					case 43:
+					case 68:
+					case 13:
+					case 93:
+						steamFriends.ban(serverID, userID);
+						steamFriends.unban(serverID, userID);
+						return sendSteamMessage(userID, "You ded");
+						break;
+					default:
+						sendSteamMessage(userID, "You survived");
+				}
 			}
+			// else{
+			// 	if(temp == 69){
+			// 		for (i = 0; i < currUserIDs.length; i++) {
+			// 			steamFriends.kick(serverID, currUserIDs[i]);
+			// 		}
+			// 	}
+			//
+			// 	switch(temp){
+			// 		case 6:
+			// 		case 42:
+			// 		case 27:
+			// 		case 58:
+			// 		case 1:
+			// 			var randUserNum = Math.floor((Math.random() * currUserIDs.length) + 1);
+			// 			steamFriends.kick(serverID, currUserIDs[randUserNum]);
+			// 	}
+			// }
+
+		}
+
+		//Steam mod call
+		if (/^!(jk|k|ka|purge|krand|b|bid|ubid|ub|cs)$/i.test(messageArray[0])) {
+			if (isMod)
+				steamModCommands(userID, messageArray, serverID);
+			else
+				steamFriends.kick(serverID, userID);
 		}
 
 		//Check User Mentions
@@ -857,9 +921,16 @@ steamFriends.on('chatStateChange', function (state, userID, serverID, modUserID)
 						}
 					}
 
-					sendSteamMessage(userID, "You were banned by the moderators.");
-					sendSteamMessage(userID, "For any appeals go to https://www.reddit.com/r/PCMRSteamMods/" +
-						" and message the mods");
+					usersDB.find({_id: userID}, function (err, docs) {
+						var lastMsg = docs[0].lastMsg;
+
+						if (!/^!rr%/i.test(lastMsg)) {
+							sendSteamMessage(userID, "You were banned by the moderators.");
+							sendSteamMessage(userID, "For any appeals go to https://www.reddit.com/r/PCMRSteamMods/" +
+								" and message the mods");
+						}
+					});
+
 					sendDiscordMessage(pcmrDiscordRelay, ["```" + user + " was banned by " + modUser + "```"]);
 					logSteamChat(serverID, userID, user, getDateTime(), user + " (" + userID + ")" + " was banned by " + modUser);
 					break;
@@ -973,11 +1044,11 @@ function steamModCommands(modUserID, messageArray, serverID) {
 		}
 	}
 
-	if (modStatus(userID))
-		return sendSteamMessage(modUserID, "Fuck you stahp it");
-
 	//Kick
 	if (/^!k$/i.test(messageArray[0])) {
+		if (modStatus(userID))
+			return sendSteamMessage(modUserID, "Fuck you stahp it");
+
 		var strikes;
 		usersDB.find({_id: userID}, function (err, docs) {
 			if (docs.length != 0) {
@@ -998,6 +1069,9 @@ function steamModCommands(modUserID, messageArray, serverID) {
 
 	//Joke kick
 	if (/^!jk$/i.test(messageArray[0])) {
+		if (modStatus(userID))
+			return sendSteamMessage(modUserID, "Fuck you stahp it");
+
 		return steamFriends.kick(serverID, userID)
 	}
 
@@ -1026,9 +1100,12 @@ function steamModCommands(modUserID, messageArray, serverID) {
 
 	//Ban by name
 	if (/^!b$/i.test(messageArray[0])) {
-		if (userID == null) {
+		if (userID == null)
 			return;
-		}
+
+		if (modStatus(userID))
+			return sendSteamMessage(modUserID, "Fuck you stahp it");
+
 		usersDB.update({_id: userID},
 			{
 				$set: {
@@ -1050,7 +1127,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 	if (/^!bid$/i.test(messageArray[0])) {
 		userID = messageArray[1];
 
-		if (modStatus(userID) || userID == botfartSteamID)
+		if (modStatus(userID))
 			return sendSteamMessage(modUserID, "Fuck you stahp it");
 
 		usersDB.find({_id: userID}, function (err, docs) {
@@ -1090,7 +1167,6 @@ function steamModCommands(modUserID, messageArray, serverID) {
 		var ubRegEx = RegExp(messageArray[1], "i");
 
 		usersDB.find({name: {$regex: ubRegEx}}, function (err, docs) {
-			console.log(ubRegEx);
 			if (docs.length != 0) {
 				userID = docs[0]._id;
 				user = docs[0].name;
@@ -1263,6 +1339,25 @@ function addUser(userID, user) {
 	})
 }
 
+function isUserPlaying(userID) {
+	(chatGamesDB.find({_id: userID}, function (err, docs) {
+		return docs.length > 0;
+	}));
+}
+
+function addChatGames(userID, user) {
+	var doc = {
+		_id: userID,
+		name: user,
+		rouletteSurvived: 0,
+		rouletteStreak: 0,
+		rouletteTopStreak: 0,
+		rouletteLost: 0
+	};
+
+	chatGamesDB.insert(doc, function (err, newDoc) {
+	})
+}
 
 /**#########################################################
  * Joke and fun related functions
