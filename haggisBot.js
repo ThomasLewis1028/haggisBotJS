@@ -26,6 +26,7 @@ var Datastore = require('nedb'),
 // usersDB = new Datastore('D:\\Projects\\WebstormProjects\\haggisBotJS\\databases\\users.db')
 
 usersDB.loadDatabase();
+chatGamesDB.loadDatabase();
 
 var fs = require('fs');
 var request = require('request');
@@ -58,6 +59,8 @@ var haggisSteamID = steamProperties.haggisID;
 var botfartSteamID = steamProperties.botfartID;
 var modIDs = steamProperties.modIDs;
 var lastSteamUserId;
+var lastRoulette = 0;
+var rouletteRound = 3;
 
 //Ready the Discord Bot
 bot.on("ready", function (rawEvent) {
@@ -615,65 +618,80 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 			}
 		}
 
+		if (/^!getStats$/i.test(message)) {
+			chatGamesDB.find({_id: userID}, function (err, docs) {
+				if (docs.length > 0) {
+					sendSteamMessage(serverID, user
+						+ ": Survived - " + docs[0].rouletteSurvived
+						+ ", Lost - " + docs[0].rouletteLost
+						+ ", Streak - " + docs[0].rouletteStreak
+						+ ", Highest Streak - " + docs[0].rouletteTopStreak
+					);
+				}
+			})
+		}
+
+		//Giveaways
+		if (/^!giveaway$/i.test(message)) {
+			var randUserNum = Math.floor((Math.random() * currUserIDs.length) + 1);
+			sendSteamMessage(serverID, steamFriends.personaStates[currUserIDs[randUserNum]].player_name)
+		}
+
 		//Russian Roulette
 		if (/^!rr$/i.test(message)) {
-			var temp = Math.floor((Math.random() * 100) + 1);
+			if ((Date.now() - lastRoulette) > 15000) {
+				lastRoulette = Date.now();
 
-			if (!isMod) {
-				switch (temp) {
-					case 5:
-					case 10:
-					case 15:
-					case 20:
-					case 25:
-					case 30:
-					case 35:
-					case 40:
-					case 45:
-					case 50:
-					case 55:
-					case 60:
-					case 65:
-					case 70:
-					case 75:
-					case 80:
-					case 85:
-					case 90:
-					case 95:
-					case 100:
-						return steamFriends.kick(serverID, userID);
-						break;
-					case 27:
-					case 43:
-					case 68:
-					case 13:
-					case 93:
-						steamFriends.ban(serverID, userID);
-						steamFriends.unban(serverID, userID);
-						return sendSteamMessage(userID, "You ded");
-						break;
-					default:
-						sendSteamMessage(userID, "You survived");
+				if (!isUserPlaying(userID)) {
+					addChatGames(userID, user);
 				}
-			}
-			// else{
-			// 	if(temp == 69){
-			// 		for (i = 0; i < currUserIDs.length; i++) {
-			// 			steamFriends.kick(serverID, currUserIDs[i]);
-			// 		}
-			// 	}
-			//
-			// 	switch(temp){
-			// 		case 6:
-			// 		case 42:
-			// 		case 27:
-			// 		case 58:
-			// 		case 1:
-			// 			var randUserNum = Math.floor((Math.random() * currUserIDs.length) + 1);
-			// 			steamFriends.kick(serverID, currUserIDs[randUserNum]);
-			// 	}
-			// }
 
+				if (rouletteRound > 0) {
+					chatGamesDB.find({_id: userID}, function (err, docs) {
+						var streak = docs[0].rouletteStreak;
+						var topStreak = docs[0].rouletteTopStreak;
+						var survived = docs[0].rouletteSurvived;
+						streak++;
+						survived++;
+						if (streak > topStreak)
+							topStreak = streak;
+
+						chatGamesDB.update({_id: userID},
+							{
+								$set: {
+									rouletteStreak: streak,
+									rouletteTopStreak: topStreak,
+									rouletteSurvived: survived,
+									lastRoulette: Date.now()
+								}
+							}, {}, function () {
+								chatGamesDB.persistence.compactDatafile()
+							})
+					});
+					sendSteamMessage(serverID, "*click*");
+					rouletteRound--;
+				} else if (rouletteRound == 0) {
+					chatGamesDB.find({_id: userID}, function (err, docs) {
+						var lost = docs[0].rouletteLost;
+						lost++;
+
+						chatGamesDB.update({_id: userID},
+							{
+								$set: {
+									rouletteStreak: 0,
+									rouletteLost: lost,
+									lastRoulette: Date.now()
+								}
+							}, {}, function () {
+								chatGamesDB.persistence.compactDatafile()
+							})
+					});
+					sendSteamMessage(serverID, "*bang*");
+					rouletteRound = Math.floor((Math.random() * 6));
+					return steamFriends.kick(serverID, userID);
+				}
+			} else
+				steamFriends.kick(serverID, userID);
 		}
 
 		//Steam mod call
@@ -1352,7 +1370,8 @@ function addChatGames(userID, user) {
 		rouletteSurvived: 0,
 		rouletteStreak: 0,
 		rouletteTopStreak: 0,
-		rouletteLost: 0
+		rouletteLost: 0,
+		lastRoulette: 0
 	};
 
 	chatGamesDB.insert(doc, function (err, newDoc) {
