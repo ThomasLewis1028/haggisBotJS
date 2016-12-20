@@ -639,7 +639,7 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 
 		//Russian Roulette
 		if (/^!rr$/i.test(message)) {
-			if ((Date.now() - lastRoulette) > 15000) {
+			if ((Date.now() - lastRoulette) > 5000) {
 				lastRoulette = Date.now();
 
 				if (!isUserPlaying(userID)) {
@@ -648,47 +648,68 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 
 				if (rouletteRound > 0) {
 					chatGamesDB.find({_id: userID}, function (err, docs) {
-						var streak = docs[0].rouletteStreak;
-						var topStreak = docs[0].rouletteTopStreak;
-						var survived = docs[0].rouletteSurvived;
-						streak++;
-						survived++;
-						if (streak > topStreak)
-							topStreak = streak;
+						if (docs[0].playedRound) {
+							sendSteamMessage(serverID, "You've already played this round");
+						} else {
+							var streak = docs[0].rouletteStreak;
+							var topStreak = docs[0].rouletteTopStreak;
+							var survived = docs[0].rouletteSurvived;
+							streak++;
+							survived++;
+							if (streak > topStreak)
+								topStreak = streak;
 
-						chatGamesDB.update({_id: userID},
-							{
-								$set: {
-									rouletteStreak: streak,
-									rouletteTopStreak: topStreak,
-									rouletteSurvived: survived,
-									lastRoulette: Date.now()
-								}
-							}, {}, function () {
-								chatGamesDB.persistence.compactDatafile()
-							})
+							chatGamesDB.update({_id: userID},
+								{
+									$set: {
+										rouletteStreak: streak,
+										rouletteTopStreak: topStreak,
+										rouletteSurvived: survived,
+										lastRoulette: Date.now(),
+										playedRound: true
+									}
+								}, {}, function () {
+									chatGamesDB.persistence.compactDatafile()
+								});
+
+							sendSteamMessage(serverID, "*click*");
+							rouletteRound--;
+						}
 					});
-					sendSteamMessage(serverID, "*click*");
-					rouletteRound--;
 				} else if (rouletteRound == 0) {
 					chatGamesDB.find({_id: userID}, function (err, docs) {
-						var lost = docs[0].rouletteLost;
-						lost++;
+						if (docs[0].playedRound) {
+							sendSteamMessage(serverID, "You've already played this round");
+						} else {
+							var lost = docs[0].rouletteLost;
+							lost++;
 
-						chatGamesDB.update({_id: userID},
-							{
-								$set: {
-									rouletteStreak: 0,
-									rouletteLost: lost,
-									lastRoulette: Date.now()
-								}
-							}, {}, function () {
-								chatGamesDB.persistence.compactDatafile()
-							})
+							chatGamesDB.update({_id: userID},
+								{
+									$set: {
+										rouletteStreak: 0,
+										rouletteLost: lost,
+										lastRoulette: Date.now(),
+										playedRound: false
+									}
+								}, {}, function () {
+									chatGamesDB.persistence.compactDatafile()
+								});
+
+							sendSteamMessage(serverID, "*bang*");
+							rouletteRound = Math.floor((Math.random() * 6));
+							steamFriends.kick(serverID, userID);
+
+							chatGamesDB.update({playedRound: true},
+								{
+									$set: {
+										playedRound: false
+									}
+								}, {multi: true}, function () {
+									chatGamesDB.persistence.compactDatafile()
+								})
+						}
 					});
-					sendSteamMessage(serverID, "*bang*");
-					rouletteRound = Math.floor((Math.random() * 6));
-					return steamFriends.kick(serverID, userID);
 				}
 			} else
 				steamFriends.kick(serverID, userID);
@@ -1371,7 +1392,8 @@ function addChatGames(userID, user) {
 		rouletteStreak: 0,
 		rouletteTopStreak: 0,
 		rouletteLost: 0,
-		lastRoulette: 0
+		lastRoulette: 0,
+		playedRound: false
 	};
 
 	chatGamesDB.insert(doc, function (err, newDoc) {
