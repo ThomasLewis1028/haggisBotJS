@@ -51,4 +51,7 @@ haggisBotProperties.json
 steveBuscemi
 steamBotProperties.json
 deusVult
-qFolder
+/qFolder/
+/node_modules/
+/logs/
+/databases/

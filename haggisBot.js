@@ -60,7 +60,7 @@ var botfartSteamID = steamProperties.botfartID;
 var modIDs = steamProperties.modIDs;
 var lastSteamUserId;
 var lastRoulette = 0;
-var rouletteRound = 3;
+var rouletteRound = Math.floor((Math.random() * 6));
 
 //Ready the Discord Bot
 bot.on("ready", function (rawEvent) {
@@ -711,8 +711,7 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 						}
 					});
 				}
-			} else
-				steamFriends.kick(serverID, userID);
+			}
 		}
 
 		//Steam mod call
