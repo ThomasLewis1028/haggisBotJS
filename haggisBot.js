@@ -639,79 +639,134 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 
 		//Russian Roulette
 		if (/^!rr$/i.test(message)) {
-			if ((Date.now() - lastRoulette) > 5000) {
-				lastRoulette = Date.now();
-
-				if (!isUserPlaying(userID)) {
-					addChatGames(userID, user);
-				}
-
-				if (rouletteRound > 0) {
-					chatGamesDB.find({_id: userID}, function (err, docs) {
-						if (docs[0].playedRound) {
-							sendSteamMessage(serverID, "You've already played this round");
-						} else {
-							var streak = docs[0].rouletteStreak;
-							var topStreak = docs[0].rouletteTopStreak;
-							var survived = docs[0].rouletteSurvived;
-							streak++;
-							survived++;
-							if (streak > topStreak)
-								topStreak = streak;
-
-							chatGamesDB.update({_id: userID},
-								{
-									$set: {
-										rouletteStreak: streak,
-										rouletteTopStreak: topStreak,
-										rouletteSurvived: survived,
-										lastRoulette: Date.now(),
-										playedRound: true
-									}
-								}, {}, function () {
-									chatGamesDB.persistence.compactDatafile()
-								});
-
-							sendSteamMessage(serverID, "*click*");
-							rouletteRound--;
-						}
-					});
-				} else if (rouletteRound == 0) {
-					chatGamesDB.find({_id: userID}, function (err, docs) {
-						if (docs[0].playedRound) {
-							sendSteamMessage(serverID, "You've already played this round");
-						} else {
-							var lost = docs[0].rouletteLost;
-							lost++;
-
-							chatGamesDB.update({_id: userID},
-								{
-									$set: {
-										rouletteStreak: 0,
-										rouletteLost: lost,
-										lastRoulette: Date.now(),
-										playedRound: false
-									}
-								}, {}, function () {
-									chatGamesDB.persistence.compactDatafile()
-								});
-
-							sendSteamMessage(serverID, "*bang*");
-							rouletteRound = Math.floor((Math.random() * 6));
-							steamFriends.kick(serverID, userID);
-
-							chatGamesDB.update({playedRound: true},
-								{
-									$set: {
-										playedRound: false
-									}
-								}, {multi: true}, function () {
-									chatGamesDB.persistence.compactDatafile()
-								})
-						}
-					});
-				}
+			if (!isUserPlaying(userID)) {
+				addChatGames(userID, user);
 			}
+
+			if (rouletteRound > 0) {
+				chatGamesDB.find({_id: userID}, function (err, docs) {
+					if (docs[0].playedRound) {
+						sendSteamMessage(serverID, "You've already played this round");
+					} else {
+						lastRoulette = Date.now();
+						var streak = docs[0].rouletteStreak;
+						var topStreak = docs[0].rouletteTopStreak;
+						var survived = docs[0].rouletteSurvived;
+						streak++;
+						survived++;
+						if (streak > topStreak)
+							topStreak = streak;
+
+						chatGamesDB.update({_id: userID},
+							{
+								$set: {
+									rouletteStreak: streak,
+									rouletteTopStreak: topStreak,
+									rouletteSurvived: survived,
+									lastRoulette: Date.now(),
+									playedRound: true
+								}
+							}, {}, function () {
+								chatGamesDB.persistence.compactDatafile()
+							});
+
+						sendSteamMessage(serverID, "*click*");
+						rouletteRound--;
+					}
+				});
+			} else if (rouletteRound == 0) {
+				chatGamesDB.find({_id: userID}, function (err, docs) {
+					if (docs[0].playedRound) {
+						sendSteamMessage(serverID, "You've already played this round");
+					} else {
+						lastRoulette = Date.now();
+						var lost = docs[0].rouletteLost;
+						lost++;
+
+						chatGamesDB.update({_id: userID},
+							{
+								$set: {
+									rouletteStreak: 0,
+									rouletteLost: lost,
+									lastRoulette: Date.now(),
+									playedRound: false
+								}
+							}, {}, function () {
+								chatGamesDB.persistence.compactDatafile()
+							});
+
+						sendSteamMessage(serverID, "*bang*");
+						rouletteRound = Math.floor((Math.random() * 6));
+						steamFriends.kick(serverID, userID);
+
+						chatGamesDB.update({playedRound: true},
+							{
+								$set: {
+									playedRound: false
+								}
+							}, {multi: true}, function () {
+								chatGamesDB.persistence.compactDatafile()
+							})
+					}
+				});
+			}
+		}
+
+		//Roulette Spin
+		if (/^!spin$/i.test(message) && isMod && ((Date.now() - lastRoulette) > 900000)) {
+			rouletteRound = Math.floor((Math.random() * 6));
+
+			chatGamesDB.update({playedRound: true},
+				{
+					$set: {
+						playedRound: false
+					}
+				}, {multi: true}, function () {
+					chatGamesDB.persistence.compactDatafile()
+				});
+
+			sendSteamMessage(serverID, "*spinning*");
+		}
+
+		//Roulette Leaderboard
+		if (/^!rrlead$/i.test(message)) {
+			var highCurrStreak = 0;
+			var highTopStreak = 0;
+			var highTopUser;
+			var highCurrUser;
+			var mostWins = 0;
+			var mostWinUser;
+			var mostLoss = 0;
+			var mostLossUser;
+
+			chatGamesDB.find({}, function (err, docs) {
+				for (i = 0; i < docs.length; i++) {
+					if (docs[i].rouletteTopStreak > highTopStreak) {
+						highTopStreak = docs[i].rouletteTopStreak;
+						highTopUser = docs[i].name;
+					}
+
+					if (docs[i].rouletteStreak > highCurrStreak) {
+						highCurrStreak = docs[i].rouletteStreak;
+						highCurrUser = docs[i].name;
+					}
+
+					if (docs[i].rouletteSurvived > mostWins) {
+						mostWins = docs[i].rouletteSurvived;
+						mostWinUser = docs[i].name;
+					}
+
+					if (docs[i].rouletteLost > mostLoss) {
+						mostLoss = docs[i].rouletteLost;
+						mostLossUser = docs[i].name;
+					}
+				}
+
+				sendSteamMessage(serverID, "Highest Streak: " + highTopUser + " - " + highTopStreak + "\n" +
+					"Highest Current Streak: " + highCurrUser + " - " + highCurrStreak + "\n" +
+					"Most Wins: " + mostWinUser + " - " + mostWins + "\n" +
+					"Most Losses: " + mostLossUser + " - " + mostLoss);
+			});
 		}
 
 		//Steam mod call
