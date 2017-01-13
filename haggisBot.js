@@ -626,6 +626,7 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 						+ ", Lost - " + docs[0].rouletteLost
 						+ ", Streak - " + docs[0].rouletteStreak
 						+ ", Highest Streak - " + docs[0].rouletteTopStreak
+						+ ", K/D - " + (docs[0].rouletteSurvived / docs[0].rouletteLost).toFixed(2)
 					);
 				}
 			})
