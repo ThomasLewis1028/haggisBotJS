@@ -772,7 +772,7 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 		}
 
 		//Steam mod call
-		if (/^!(jk|k|ka|purge|krand|b|bid|ubid|ub|cs)$/i.test(messageArray[0])) {
+		if (/^!(jk|k|ka|krand|b|bid|ubid|ub|cs)$/i.test(messageArray[0])) {
 			if (isMod)
 				steamModCommands(userID, messageArray, serverID);
 			else
@@ -1223,11 +1223,11 @@ function steamModCommands(modUserID, messageArray, serverID) {
 	}
 
 	//Kick all
-	if (/^!purge/i.test(messageArray[0])) {
-		for (i = 0; i < currUserIDs.length; i++) {
-			steamFriends.kick(serverID, currUserIDs[i]);
-		}
-	}
+	// if (/^!purge/i.test(messageArray[0])) {
+	// 	for (i = 0; i < currUserIDs.length; i++) {
+	// 		steamFriends.kick(serverID, currUserIDs[i]);
+	// 	}
+	// }
 
 	//Ban by name
 	if (/^!b$/i.test(messageArray[0])) {
@@ -1255,7 +1255,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 	}
 
 	//Ban by ID
-	if (/^!bid$/i.test(messageArray[0])) {
+	if (/^!bid$/i.test(messageArray[0]) && /^\d{17}$/i.test(messageArray[1])) {
 		userID = messageArray[1];
 
 		if (modStatus(userID))
