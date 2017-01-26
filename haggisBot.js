@@ -22,11 +22,12 @@ steamClient.on('connected', function () {
 
 var Datastore = require('nedb'),
 	usersDB = new Datastore('/home/thomas/discordBot/haggisBotJS/databases/users.db'),
-	chatGamesDB = new Datastore('/home/thomas/discordBot/haggisBotJS/databases/chatGames.db');
-// usersDB = new Datastore('D:\\Projects\\WebstormProjects\\haggisBotJS\\databases\\users.db')
+	chatGamesDB = new Datastore('/home/thomas/discordBot/haggisBotJS/databases/chatGames.db'),
+	pingMe = new Datastore('/home/thomas/discordBot/haggisBotJS/databases/pingMe.db');
 
 usersDB.loadDatabase();
 chatGamesDB.loadDatabase();
+pingMe.loadDatabase();
 
 var fs = require('fs');
 var request = require('request');
@@ -794,6 +795,42 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 			sendSteamMessage(userID, "Pong")
 		}
 
+		//Ping Me
+		if (/^!pingMe$/i.test(message)) {
+			pingMe.find({_id: userID}, function (err, docs) {
+				if (docs.length == 0) {
+					addPingMe(userID, user);
+				} else if (docs[0].ping == true) {
+					pingMe.update({_id: userID}, {
+						$set: {ping: false}
+					}, {}, function () {
+						pingMe.persistence.compactDatafile();
+					})
+				} else if (docs[0].ping == false) {
+					pingMe.update({_id: userID}, {
+						$set: {ping: true}
+					}, {}, function () {
+						pingMe.persistence.compactDatafile();
+					})
+				}
+			})
+		}
+
+		//@Mentions
+		if (/^@[a-z]+/i.test(messageArray[0])) {
+			var mention = RegExp(messageArray[0].substr(1), "i");
+
+			pingMe.find({name: {$regex: mention}}, function (err, docs) {
+				if (docs.length == 0) {
+					sendSteamMessage(userID, "That user is unavailable for pings.");
+				} else if (docs[0].ping == false){
+					sendSteamMessage(userID, "That user is unavailable for pings.");
+				} else {
+					sendSteamMessage(docs[0]._id, "User " + user + " pinged you with:\n" + message);
+				}
+			})
+		}
+
 		//Rules
 		if (/^!rules$/i.test(message)) {
 			sendSteamMessage(serverID, "https://www.reddit.com/r/pcmasterrace/wiki/steamchat")
@@ -1452,6 +1489,17 @@ function addChatGames(userID, user) {
 	};
 
 	chatGamesDB.insert(doc, function (err, newDoc) {
+	})
+}
+
+function addPingMe(userID, user) {
+	var doc = {
+		_id: userID,
+		name: user,
+		ping: true
+	};
+
+	pingMe.insert(doc, function (err, newDoc) {
 	})
 }
 
