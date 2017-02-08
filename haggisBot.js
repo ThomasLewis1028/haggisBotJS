@@ -715,19 +715,35 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 		}
 
 		//Roulette Spin
-		if (/^!spin$/i.test(message) && isMod && ((Date.now() - lastRoulette) > 900000)) {
-			rouletteRound = Math.floor((Math.random() * 6));
+		if (/^!spin$/i.test(message) && isMod) {
+			if (((Date.now() - lastRoulette) > 900000)) {
+				chatGamesDB.find({_id: userID}, function (err, docs) {
+					if (docs[0].playedRound == false) {
+						sendSteamMessage(serverID, "Please play before spinning the barrel.");
+					} else {
+						rouletteRound = Math.floor((Math.random() * 6));
 
-			chatGamesDB.update({playedRound: true},
-				{
-					$set: {
-						playedRound: false
+						chatGamesDB.update({playedRound: true},
+							{
+								$set: {
+									playedRound: false
+								}
+							}, {multi: true}, function () {
+								chatGamesDB.persistence.compactDatafile()
+							});
+
+						sendSteamMessage(serverID, "*spinning*");
 					}
-				}, {multi: true}, function () {
-					chatGamesDB.persistence.compactDatafile()
-				});
-
-			sendSteamMessage(serverID, "*spinning*");
+				})
+			} else {
+				var timeMinute = ((900000 - (Date.now() - lastRoulette)) / 60000);
+				if (timeMinute > 1)
+					sendSteamMessage(serverID, "Please wait " + timeMinute.toFixed(0)
+						+ " minutes before spinning the barrel.");
+				else
+					sendSteamMessage(serverID, "Please wait " + timeMinute.toFixed(0)
+						+ " minute before spinning the barrel.");
+			}
 		}
 
 		//Roulette Leaderboard
@@ -823,7 +839,7 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 			pingMe.find({name: {$regex: mention}}, function (err, docs) {
 				if (docs.length == 0) {
 					sendSteamMessage(userID, "That user is unavailable for pings.");
-				} else if (docs[0].ping == false){
+				} else if (docs[0].ping == false) {
 					sendSteamMessage(userID, "That user is unavailable for pings.");
 				} else {
 					sendSteamMessage(docs[0]._id, "User " + user + " pinged you with:\n" + message);
@@ -835,11 +851,14 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 		if (/^!rules$/i.test(message)) {
 			sendSteamMessage(serverID, "https://www.reddit.com/r/pcmasterrace/wiki/steamchat")
 		}
-	} catch (err) {
+	}
+	catch
+		(err) {
 		console.log(err + " 2");
 		logError(getDateTime(), err + " 2");
 	}
-});
+})
+;
 
 /**#########################################################
  * Discord related functions
@@ -1138,9 +1157,15 @@ function logRetrieve(channelID, userID, yyyy, mm, dd) {
 
 //###DO ON STEAM PM###
 steamFriends.on('friendMsg', function (userID, message, type) {
+	var messageArray = message.split(" ");
 	try {
 		if (type == 2 || type == 6) {
 			return;
+		} else if (modStatus(userID)) {
+			if (/^!(jk|k|ka|krand|b|bid|ubid|ub|cs)$/i.test(messageArray[0])) {
+				steamModCommands(userID, messageArray, pcmrSteamGroup);
+
+			}
 		}
 
 		return;
@@ -1249,7 +1274,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 				usersDB.persistence.compactDatafile()
 			});
 		for (i = 0; i < modIDs.length; i++) {
-			sendSteamMessage(modIDs[i]["steamModID"], user + "(" + userID + ")" + " was banned by " + modUser);
+			sendSteamMessage(modIDs[i]["steamModID"], user + " (" + userID + ")" + " was banned by " + modUser);
 		}
 		return steamFriends.ban(serverID, userID);
 	}
