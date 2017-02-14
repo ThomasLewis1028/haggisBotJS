@@ -572,9 +572,9 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 
 				for (i = 0; i < modIDs.length; i++) {
 					sendSteamMessage(userID, "You were banned for sending more than 200" +
-						" characters and 5 lines");
+						" characters and 5 lines.");
 					sendSteamMessage(userID, "For any appeals go to https://www.reddit.com/r/PCMRSteamMods/" +
-						" and message the mods");
+						" and message the mods.");
 
 					steamFriends.ban(serverID, userID);
 					usersDB.update({_id: userID},
@@ -590,7 +590,8 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 						});
 
 					sendSteamMessage(modIDs[i]["steamModID"],
-						user + "(" + userID + ") was banned for sending more than 500 characters");
+						user + "(" + userID + ") was banned for sending more than 200 characters" +
+							" and 5 lines.");
 				}
 			}
 		}
