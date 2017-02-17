@@ -119,7 +119,7 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 			lastSteamUserId = botfartDiscordID;
 			logSteamChat(channelID, userID, user, getDateTime(), message);
 
-			if (/^!(jk|k|b|bid)$/i.test(messageArray[0])) {
+			if (/^!(jk|k|ka|krand|b|bid|ubid|ub|cs)$/i.test(messageArray[0])) {
 				for (i = 0; i < modIDs.length; i++) {
 					if (userID == modIDs[i]["discordModID"]) {
 						steamModCommands(modIDs[i]["steamModID"], messageArray, pcmrSteamGroup);
@@ -568,30 +568,27 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 				});
 			}
 
-			if (message.length > 200 && newlineArray.length > 4) {
+			if (newlineArray.length > 4) {
+				sendSteamMessage(userID, "You were banned for sending 5 lines or more.");
+				sendSteamMessage(userID, "For any appeals go to https://www.reddit.com/r/PCMRSteamMods/" +
+					" and message the mods.");
+
+				steamFriends.ban(serverID, userID);
+				usersDB.update({_id: userID},
+					{
+						$set: {
+							banned: true,
+							strikes: 0,
+							bannedBy: "Botfart",
+							bannedOn: getDateTime()
+						}
+					}, {}, function () {
+						usersDB.persistence.compactDatafile()
+					});
 
 				for (i = 0; i < modIDs.length; i++) {
-					sendSteamMessage(userID, "You were banned for sending more than 200" +
-						" characters and 5 lines.");
-					sendSteamMessage(userID, "For any appeals go to https://www.reddit.com/r/PCMRSteamMods/" +
-						" and message the mods.");
-
-					steamFriends.ban(serverID, userID);
-					usersDB.update({_id: userID},
-						{
-							$set: {
-								banned: true,
-								strikes: 0,
-								bannedBy: "Botfart",
-								bannedOn: getDateTime()
-							}
-						}, {}, function () {
-							usersDB.persistence.compactDatafile()
-						});
-
 					sendSteamMessage(modIDs[i]["steamModID"],
-						user + "(" + userID + ") was banned for sending more than 200 characters" +
-							" and 5 lines.");
+						user + "(" + userID + ") was banned for sending 5 lines or more.");
 				}
 			}
 		}
@@ -1074,12 +1071,6 @@ steamFriends.on('chatStateChange', function (state, userID, serverID, modUserID)
 
 					usersDB.find({_id: userID}, function (err, docs) {
 						var lastMsg = docs[0].lastMsg;
-
-						if (!/^!rr%/i.test(lastMsg)) {
-							sendSteamMessage(userID, "You were banned by the moderators.");
-							sendSteamMessage(userID, "For any appeals go to https://www.reddit.com/r/PCMRSteamMods/" +
-								" and message the mods");
-						}
 					});
 
 					sendDiscordMessage(pcmrDiscordRelay, ["```" + user + " was banned by " + modUser + "```"]);
@@ -1277,6 +1268,10 @@ function steamModCommands(modUserID, messageArray, serverID) {
 		for (i = 0; i < modIDs.length; i++) {
 			sendSteamMessage(modIDs[i]["steamModID"], user + " (" + userID + ")" + " was banned by " + modUser);
 		}
+
+		sendSteamMessage(userID, "You were banned by the moderators.");
+		sendSteamMessage(userID, "For any appeals go to https://www.reddit.com/r/PCMRSteamMods/" +
+			" and message the mods");
 		return steamFriends.ban(serverID, userID);
 	}
 
@@ -1315,7 +1310,9 @@ function steamModCommands(modUserID, messageArray, serverID) {
 			}
 
 		});
-
+		sendSteamMessage(userID, "You were banned by the moderators.");
+		sendSteamMessage(userID, "For any appeals go to https://www.reddit.com/r/PCMRSteamMods/" +
+			" and message the mods");
 		return steamFriends.ban(serverID, userID);
 	}
 
@@ -1344,6 +1341,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 					sendSteamMessage(modIDs[i]["steamModID"], user + "(" + userID + ")" + " was unbanned by " + modUser);
 				}
 
+				sendSteamMessage(userID, "You were unbanned by the moderators of the /r/PCMasterRace steam chat.");
 				return steamFriends.unban(serverID, userID);
 			}
 		});
@@ -1382,6 +1380,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 				}
 			}
 
+			sendSteamMessage(userID, "You were unbanned by the moderators of the /r/PCMasterRace steam chat.");
 			return steamFriends.unban(serverID, userID);
 		});
 	}
