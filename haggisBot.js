@@ -163,16 +163,19 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 			if (/^!getInfo$/i.test(messageArray[0]) && messageArray.length == 2) {
 				var userCheck = messageArray[1];
 				usersDB.find({_id: userCheck}, function (err, docs) {
-					sendDiscordMessage(channelID, ["```" + docs[0].name + " - " + userCheck +
-					"\nBanned: " + docs[0].banned +
-					"\nStrikes: " + docs[0].strikes +
-					"\nBanned By " + docs[0].bannedBy + " on " + docs[0].bannedOn +
-					"\n\nLast Five Messages: \n - " +
-					docs[0].last5Msgs[0] + "\n\n - " +
-					docs[0].last5Msgs[1] + "\n\n - " +
-					docs[0].last5Msgs[2] + "\n\n - " +
-					docs[0].last5Msgs[3] + "\n\n - " +
-					docs[0].last5Msgs[4] + "```"]);
+					if (docs.length != 0) {
+						sendDiscordMessage(channelID, ["```" + docs[0].name + " - " + userCheck +
+						"\nBanned: " + docs[0].banned +
+						"\nStrikes: " + docs[0].strikes +
+						"\nBanned By " + docs[0].bannedBy + " on " + docs[0].bannedOn +
+						"\n\nLast Five Messages: \n - " +
+						docs[0].last5Msgs[0] + "\n\n - " +
+						docs[0].last5Msgs[1] + "\n\n - " +
+						docs[0].last5Msgs[2] + "\n\n - " +
+						docs[0].last5Msgs[3] + "\n\n - " +
+						docs[0].last5Msgs[4] + "```"]);
+					} else
+						sendDiscordMessage(channelID, ["No user found."])
 				})
 			}
 		}
@@ -1235,7 +1238,10 @@ function steamModCommands(modUserID, messageArray, serverID) {
 
 	//Kick random
 	if (/^!krand$/i.test(messageArray[0])) {
-		var randUserNum = Math.floor((Math.random() * currUserIDs.length) + 1);
+		do
+			var randUserNum = Math.floor((Math.random() * currUserIDs.length) + 1);
+		while (modStatus(randUserNum));
+
 		steamFriends.kick(serverID, currUserIDs[randUserNum]);
 	}
 
@@ -1275,7 +1281,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 		return steamFriends.ban(serverID, userID);
 	}
 
-	//Ban by ID
+//Ban by ID
 	if (/^!bid$/i.test(messageArray[0]) && /^\d{17}$/i.test(messageArray[1])) {
 		userID = messageArray[1];
 
@@ -1316,7 +1322,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 		return steamFriends.ban(serverID, userID);
 	}
 
-	//Unban by name
+//Unban by name
 	if (/^!ub$/i.test(messageArray[0])) {
 		var ubRegEx = RegExp(messageArray[1], "i");
 
@@ -1349,7 +1355,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 
 	}
 
-	//Unban by ID
+//Unban by ID
 	if (/^!ubid$/i.test(messageArray[0])) {
 		userID = messageArray[1];
 
@@ -1385,7 +1391,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 		});
 	}
 
-	//Clear strikes
+//Clear strikes
 	if (/^!cs$/i.test(messageArray[0])) {
 		usersDB.update({_id: userID},
 			{
@@ -1398,500 +1404,508 @@ function steamModCommands(modUserID, messageArray, serverID) {
 	}
 }
 
+
 //###AUTO RECONNECT###
-steamClient.on('disconnect', function () {
-	{
-		steamClient.connect(); //Auto reconnect
-	}
-});
-
-//###IS MOD###
-function modStatus(userID) {
-	for (i = 0; i < modIDs.length; i++) {
-		if (userID == modIDs[i]["steamModID"]) {
-			return true;
-		}
-	}
-	return false;
-}
-/**#########################################################
- * Shared functions
- * functions used by both discord and steam
- #########################################################**/
-
-//###GET DATE AND TIME###
-function getDateTime() {
-	var date = new Date();
-
-	var year = date.getFullYear();
-
-	var month = date.getMonth() + 1;
-	month = (month < 10 ? "0" : "") + month;
-
-	var day = date.getDate();
-	day = (day < 10 ? "0" : "") + day;
-
-	var hour = date.getHours();
-	hour = (hour < 10 ? "0" : "") + hour;
-
-	var min = date.getMinutes();
-	min = (min < 10 ? "0" : "") + min;
-
-	var sec = date.getSeconds();
-	sec = (sec < 10 ? "0" : "") + sec;
-
-
-	return day + "-" + month + "-" + year + ": " + hour + ":" + min + ":" + sec;
-}
-
-//###LOG ERROR###
-function logError(time, err) {
-	var date = new Date();
-	var yyyy = date.getFullYear();
-	var mm = date.getMonth() + 1;
-	mm = (mm < 10 ? "0" : "") + mm;
-	var dd = date.getDate();
-	dd = (dd < 10 ? "0" : "") + dd;
-
-	var path = haggisBotPath + "logs/";
-	var fileName = yyyy + "-" + mm + "-" + dd + "-ERROR.txt";
-
-	var logContent = yyyy + "-" + mm + "-" + dd + "-" + time + "\r\n"
-		+ err + "\r\n"
-		+ "----------\r\n";
-
-	fs.appendFileSync(path + fileName, logContent, encoding = "utf8");
-}
-
-/**#########################################################
- * Joke and fun related functions
- * Most of this stuff is for my personal discord server
- #########################################################**/
-
-//Is user listed
-function isUserListed(userID) {
-	(usersDB.find({_id: userID}, function (err, docs) {
-		return docs.length > 0;
-	}));
-}
-
-function addUser(userID, user) {
-	var doc = {
-		_id: userID,
-		name: user,
-		lastMsgTime: null,
-		lastMsg: null,
-		last5Msgs: [null, null, null, null, null],
-		last5Times: [0, 0, 0, 0, 0],
-		lastEntrance: null,
-		lastExit: null,
-		strikes: 0,
-		banned: false,
-		bannedBy: null,
-		bannedOn: null
-	};
-
-	usersDB.insert(doc, function (err, newDoc) {
-	})
-}
-
-function isUserPlaying(userID) {
-	(chatGamesDB.find({_id: userID}, function (err, docs) {
-		return docs.length > 0;
-	}));
-}
-
-function addChatGames(userID, user) {
-	var doc = {
-		_id: userID,
-		name: user,
-		rouletteSurvived: 0,
-		rouletteStreak: 0,
-		rouletteTopStreak: 0,
-		rouletteLost: 0,
-		lastRoulette: 0,
-		playedRound: false
-	};
-
-	chatGamesDB.insert(doc, function (err, newDoc) {
-	})
-}
-
-function addPingMe(userID, user) {
-	var doc = {
-		_id: userID,
-		name: user,
-		ping: true
-	};
-
-	pingMe.insert(doc, function (err, newDoc) {
-	})
-}
-
-/**#########################################################
- * Joke and fun related functions
- * Most of this stuff is for my personal discord server
- #########################################################**/
-
-//##ROLL DICE SHADOWRUN###
-function rollDiceSR(diceNum) {
-	var results = "```\nResults: ";
-	var successes = 0;
-	var glitches = 0;
-	var sum = 0;
-	var diceResult;
-
-	for (var i = 0; i < diceNum; i++) {
-		diceResult = Math.floor((Math.random() * 6) + 1);
-		sum += diceResult;
-
-		if (i == 0) {
-			results = results.concat("\{", diceResult.toString());
-		} else if (i != 0 && i != diceNum - 1) {
-			results = results.concat(", ", diceResult.toString());
-		} else if (i == diceNum - 1) {
-			results = results.concat(", ", diceResult.toString());
-		}
-
-		if (diceResult == 5 || diceResult == 6) {
-			successes++;
-		}
-		if (diceResult == 1) {
-			glitches++;
-		}
-
-	}
-	results = results.concat("\}");
-	results = results.concat("\n", "Successes: ", successes.toString());
-	results = results.concat("\n", "Glitches: ", glitches.toString());
-	results = results.concat("\n", "Sum: ", sum.toString());
-	results = results.concat("```");
-
-	return results;
-}
-
-//###ROLL DICE SUM###
-function rollDiceSum(diceNum, diceSide) {
-	var results = "```\nResults: ";
-	var sum = 0;
-	var diceResult = 0;
-
-	for (var i = 0; i < diceNum; i++) {
-		diceResult = Math.floor((Math.random() * diceSide) + 1);
-		sum += diceResult;
-
-		if (i == 0) {
-			results = results.concat("\{", diceResult.toString());
-		} else if (i != 0 && i != diceNum - 1) {
-			results = results.concat(", ", diceResult.toString());
-		} else if (i == diceNum - 1) {
-			results = results.concat(", ", diceResult.toString());
-		}
-	}
-	results = results.concat("\}");
-	results = results.concat("\n", "Sum: ", sum.toString());
-	results = results.concat("```");
-
-	return results;
-}
-
-//###PICK A CARD###
-function pickACard() {
-	var results = "```\n";
-	var cardSuit = Math.floor((Math.random() * 4) + 1);
-	var cardID = Math.floor((Math.random() * 13) + 1);
-
-	switch (cardID) {
-		case 1:
-			results = results.concat("Ace");
-			break;
-		case 2:
-		case 3:
-		case 4:
-		case 5:
-		case 6:
-		case 7:
-		case 8:
-		case 9:
-		case 10:
-			results = results.concat(cardID.toString());
-			break;
-		case 11:
-			results = results.concat("Jack");
-			break;
-		case 12:
-			results = results.concat("Queen");
-			break;
-		case 13:
-			results = results.concat("King");
-	}
-	switch (cardSuit) {
-		case 1:
-			results = results.concat(" of Spades");
-			break;
-		case 2:
-			results = results.concat(" of Hearts");
-			break;
-		case 3:
-			results = results.concat(" of Clubs");
-			break;
-		case 4:
-			results = results.concat(" of Diamonds");
-	}
-	results = results.concat("```");
-
-	return results;
-}
-
-//###FLIP A COIN###
-function flipACoin() {
-	var results = "```\n";
-	var coinSide = Math.floor((Math.random() * 2) + 1);
-
-	switch (coinSide) {
-		case 1:
-			results = results.concat("Heads");
-			break;
-		case 2:
-			results = results.concat("Tails");
-	}
-
-	results = results.concat("```");
-
-	return results;
-}
-
-//###FLIP A REAL COIN###
-function flipARealCoin() {
-	var coinSide = Math.floor((Math.random() * 2) + 1);
-
-	switch (coinSide) {
-		case 1:
-			results = haggisBotPath + "quarter-coin-head.jpg";
-			break;
-		case 2:
-			results = haggisBotPath + "half-dollar-coin-tail.jpg";
-	}
-
-
-	return results;
-}
-
-//###ADD MUSIC###
-function addMusic(link, name) {
-	var autoplaylistContent = fs.readFileSync(autoplaylist, encoding = 'utf8');
-	var autoplaylistArray = autoplaylistContent.split("\r\n");
-	var musicBlacklistContent = fs.readFileSync(musicBlacklist, encoding = 'utf8');
-	var musicBlacklistArray = musicBlacklistContent.split("\r\n");
-	var songExists = false;
-	var songBlacklisted = false;
-
-	for (i = 0; i < musicBlacklistArray.length; i++) {
-		if (musicBlacklistArray[i] == link) {
-			songBlacklisted = true;
-
-			results = "Song blacklisted, fuck off";
-		}
-	}
-
-	for (i = 0; i < autoplaylistArray.length; i++) {
-		if (autoplaylistArray[i] == link) {
-			songExists = true;
-
-			results = "Song already exists";
-		}
-	}
-
-	if (songExists == false && songBlacklisted == false) {
-		fs.appendFileSync(autoplaylist, link + '\r\n', encoding = 'utf8');
-
-		results = "Song added to autoplaylist";
-
-		sendDiscordMessage(haggisDiscordID, [name + " added " + link + " to autoplay list"]);
-	}
-
-	return results;
-}
-
-//###STEVE BUSCEMI###
-function steveBuscemi() {
-	var steveFolder = haggisBotPath + "steveBuscemi/";
-	var files = fs.readdirSync(steveFolder);
-
-	fileList = [];
-
-	for (var i in files) {
-		if (!files.hasOwnProperty(i)) continue;
-		var name = steveFolder + '/' + files[i];
-		if (!fs.statSync(name).isDirectory()) {
-			fileList.push(name);
-		}
-	}
-
-	var imageID = Math.floor((Math.random() * fileList.length) + 1);
-	return fileList[imageID];
-}
-
-//###ADAM###
-function adamClick() {
-	var adamFolder = haggisBotPath + "adamClick/";
-	var files = fs.readdirSync(adamFolder);
-
-	fileList = [];
-
-	for (var i in files) {
-		if (!files.hasOwnProperty(i)) continue;
-		var name = adamFolder + '/' + files[i];
-		if (!fs.statSync(name).isDirectory()) {
-			fileList.push(name);
-		}
-	}
-
-	var imageID = Math.floor((Math.random() * fileList.length) + 1);
-	return fileList[imageID];
-}
-
-//###QUINNLAN###
-function qubeyPitts() {
-	var qFolder = haggisBotPath + "Quinnlan/";
-	var files = fs.readdirSync(qFolder);
-
-	fileList = [];
-
-	for (var i in files) {
-		if (!files.hasOwnProperty(i)) continue;
-		var name = qFolder + '/' + files[i];
-		if (!fs.statSync(name).isDirectory()) {
-			fileList.push(name);
-		}
-	}
-
-	var imageID = Math.floor((Math.random() * fileList.length) + 1);
-	return fileList[imageID];
-}
-
-//###DICKBUTT###
-function richardKiester() {
-	var dickbuttFolder = haggisBotPath + "DickButt/";
-	var files = fs.readdirSync(dickbuttFolder);
-
-	fileList = [];
-
-	for (var i in files) {
-		if (!files.hasOwnProperty(i)) continue;
-		var name = dickbuttFolder + '/' + files[i];
-		if (!fs.statSync(name).isDirectory()) {
-			fileList.push(name);
-		}
-	}
-
-	var imageID = Math.floor((Math.random() * fileList.length) + 1);
-	return fileList[imageID];
-}
-
-//###DEUS VULT###
-function deusVult() {
-	var deusVult = haggisBotPath + "deusVult/";
-	var files = fs.readdirSync(deusVult);
-
-	fileList = [];
-
-	for (var i in files) {
-		if (!files.hasOwnProperty(i)) continue;
-		var name = deusVult + '/' + files[i];
-		if (!fs.statSync(name).isDirectory()) {
-			fileList.push(name);
-		}
-	}
-
-	var imageID = Math.floor((Math.random() * fileList.length) + 1);
-	return fileList[imageID];
-}
-
-/**
- * LINKBOT STUFF
- */
-function searchForGame(forThis, callback) {
-	var resultsArr = [];
-	var gameList = localList.applist.apps;
-
-	for (var i = 0; i < gameList.length; i++) {
-		if (gameList[i].name.toUpperCase().indexOf(forThis.toUpperCase()) > -1) {
-			resultsArr.push(gameList[i]);
-		}
-	}
-
-	resultsArr.sort(function (a, b) {
-		if (a.name.length < b.name.length) {
-			return -1;
-		} else if (a.name.length > b.name.length) {
-			return 1;
-		} else {
-			return 0;
+	steamClient.on('disconnect', function () {
+		{
+			steamClient.connect();
+			steamClient.on('connected', function () {
+				steamUser.logOn({
+					account_name: steamProperties.username,
+					password: steamProperties.password
+				});
+			});
 		}
 	});
 
-	if (resultsArr.length > 0) {
-		callback(resultsArr[0]);
+//###IS MOD###
+	function modStatus(userID) {
+		for (i = 0; i < modIDs.length; i++) {
+			if (userID == modIDs[i]["steamModID"]) {
+				return true;
+			}
+		}
+		return false;
 	}
-}
 
-function testForURL(message, callback) {
-	var exURL;
-	var extra;
+	/**#########################################################
+	 * Shared functions
+	 * functions used by both discord and steam
+	 #########################################################**/
 
-	// if (message.startsWith("!linkme ")) {
-	// 	var inputTitle = message.substring(message.indexOf("!linkme ") + 8, message.length);
+//###GET DATE AND TIME###
+	function getDateTime() {
+		var date = new Date();
 
-	// 	updateList(function () {
-	// 		searchForGame(inputTitle, function (resultObj) {
-	// 			message = "http://store.steampowered.com/app/" + resultObj.appid;
-	// 			extra = message;
-	// 		});
-	// 	});
-	// }
+		var year = date.getFullYear();
 
-	if (message.indexOf('http') > -1) {
-		message.indexOf(" ", message.indexOf("http")) === -1 ? exURL = message.substring(message.indexOf("http"), message.length) : exURL = message.substring(message.indexOf("http"), message.indexOf(" ", message.indexOf("http")));
-		if (exURL.indexOf("://i.imgur.com/") > -1) exURL = exURL.substring(0, exURL.length - 4).replace("i.imgur.com", "imgur.com");
+		var month = date.getMonth() + 1;
+		month = (month < 10 ? "0" : "") + month;
 
-		callback(exURL, extra);
+		var day = date.getDate();
+		day = (day < 10 ? "0" : "") + day;
+
+		var hour = date.getHours();
+		hour = (hour < 10 ? "0" : "") + hour;
+
+		var min = date.getMinutes();
+		min = (min < 10 ? "0" : "") + min;
+
+		var sec = date.getSeconds();
+		sec = (sec < 10 ? "0" : "") + sec;
+
+
+		return day + "-" + month + "-" + year + ": " + hour + ":" + min + ":" + sec;
 	}
-}
 
-function visitURL(URL, callback) {
-	var streamArr = [];
-	var maxSize = 10 * 1024 * 1024;
-	var rt;
+//###LOG ERROR###
+	function logError(time, err) {
+		var date = new Date();
+		var yyyy = date.getFullYear();
+		var mm = date.getMonth() + 1;
+		mm = (mm < 10 ? "0" : "") + mm;
+		var dd = date.getDate();
+		dd = (dd < 10 ? "0" : "") + dd;
 
-	var req = request(URL, function (err, res, body) {
-		if (!err && res.statusCode == 200) {
-			if (body) {
-				try {
-					var streamerInfo = JSON.parse(body);
-					rt = true;
-					callback(true, null, streamerInfo);
-				} catch (e) {
-					if (body.indexOf('<title>') == -1) {
-					} else {
-						var title = he.decode(body.substring(body.indexOf('<title>') + 7, body.indexOf('</title>'))).trim();
+		var path = haggisBotPath + "logs/";
+		var fileName = yyyy + "-" + mm + "-" + dd + "-ERROR.txt";
+
+		var logContent = yyyy + "-" + mm + "-" + dd + "-" + time + "\r\n"
+			+ err + "\r\n"
+			+ "----------\r\n";
+
+		fs.appendFileSync(path + fileName, logContent, encoding = "utf8");
+	}
+
+	/**#########################################################
+	 * Joke and fun related functions
+	 * Most of this stuff is for my personal discord server
+	 #########################################################**/
+
+//Is user listed
+	function isUserListed(userID) {
+		(usersDB.find({_id: userID}, function (err, docs) {
+			return docs.length > 0;
+		}));
+	}
+
+	function addUser(userID, user) {
+		var doc = {
+			_id: userID,
+			name: user,
+			lastMsgTime: null,
+			lastMsg: null,
+			last5Msgs: [null, null, null, null, null],
+			last5Times: [0, 0, 0, 0, 0],
+			lastEntrance: null,
+			lastExit: null,
+			strikes: 0,
+			banned: false,
+			bannedBy: null,
+			bannedOn: null
+		};
+
+		usersDB.insert(doc, function (err, newDoc) {
+		})
+	}
+
+	function isUserPlaying(userID) {
+		(chatGamesDB.find({_id: userID}, function (err, docs) {
+			return docs.length > 0;
+		}));
+	}
+
+	function addChatGames(userID, user) {
+		var doc = {
+			_id: userID,
+			name: user,
+			rouletteSurvived: 0,
+			rouletteStreak: 0,
+			rouletteTopStreak: 0,
+			rouletteLost: 0,
+			lastRoulette: 0,
+			playedRound: false
+		};
+
+		chatGamesDB.insert(doc, function (err, newDoc) {
+		})
+	}
+
+	function addPingMe(userID, user) {
+		var doc = {
+			_id: userID,
+			name: user,
+			ping: true
+		};
+
+		pingMe.insert(doc, function (err, newDoc) {
+		})
+	}
+
+	/**#########################################################
+	 * Joke and fun related functions
+	 * Most of this stuff is for my personal discord server
+	 #########################################################**/
+
+//##ROLL DICE SHADOWRUN###
+	function rollDiceSR(diceNum) {
+		var results = "```\nResults: ";
+		var successes = 0;
+		var glitches = 0;
+		var sum = 0;
+		var diceResult;
+
+		for (var i = 0; i < diceNum; i++) {
+			diceResult = Math.floor((Math.random() * 6) + 1);
+			sum += diceResult;
+
+			if (i == 0) {
+				results = results.concat("\{", diceResult.toString());
+			} else if (i != 0 && i != diceNum - 1) {
+				results = results.concat(", ", diceResult.toString());
+			} else if (i == diceNum - 1) {
+				results = results.concat(", ", diceResult.toString());
+			}
+
+			if (diceResult == 5 || diceResult == 6) {
+				successes++;
+			}
+			if (diceResult == 1) {
+				glitches++;
+			}
+
+		}
+		results = results.concat("\}");
+		results = results.concat("\n", "Successes: ", successes.toString());
+		results = results.concat("\n", "Glitches: ", glitches.toString());
+		results = results.concat("\n", "Sum: ", sum.toString());
+		results = results.concat("```");
+
+		return results;
+	}
+
+//###ROLL DICE SUM###
+	function rollDiceSum(diceNum, diceSide) {
+		var results = "```\nResults: ";
+		var sum = 0;
+		var diceResult = 0;
+
+		for (var i = 0; i < diceNum; i++) {
+			diceResult = Math.floor((Math.random() * diceSide) + 1);
+			sum += diceResult;
+
+			if (i == 0) {
+				results = results.concat("\{", diceResult.toString());
+			} else if (i != 0 && i != diceNum - 1) {
+				results = results.concat(", ", diceResult.toString());
+			} else if (i == diceNum - 1) {
+				results = results.concat(", ", diceResult.toString());
+			}
+		}
+		results = results.concat("\}");
+		results = results.concat("\n", "Sum: ", sum.toString());
+		results = results.concat("```");
+
+		return results;
+	}
+
+//###PICK A CARD###
+	function pickACard() {
+		var results = "```\n";
+		var cardSuit = Math.floor((Math.random() * 4) + 1);
+		var cardID = Math.floor((Math.random() * 13) + 1);
+
+		switch (cardID) {
+			case 1:
+				results = results.concat("Ace");
+				break;
+			case 2:
+			case 3:
+			case 4:
+			case 5:
+			case 6:
+			case 7:
+			case 8:
+			case 9:
+			case 10:
+				results = results.concat(cardID.toString());
+				break;
+			case 11:
+				results = results.concat("Jack");
+				break;
+			case 12:
+				results = results.concat("Queen");
+				break;
+			case 13:
+				results = results.concat("King");
+		}
+		switch (cardSuit) {
+			case 1:
+				results = results.concat(" of Spades");
+				break;
+			case 2:
+				results = results.concat(" of Hearts");
+				break;
+			case 3:
+				results = results.concat(" of Clubs");
+				break;
+			case 4:
+				results = results.concat(" of Diamonds");
+		}
+		results = results.concat("```");
+
+		return results;
+	}
+
+//###FLIP A COIN###
+	function flipACoin() {
+		var results = "```\n";
+		var coinSide = Math.floor((Math.random() * 2) + 1);
+
+		switch (coinSide) {
+			case 1:
+				results = results.concat("Heads");
+				break;
+			case 2:
+				results = results.concat("Tails");
+		}
+
+		results = results.concat("```");
+
+		return results;
+	}
+
+//###FLIP A REAL COIN###
+	function flipARealCoin() {
+		var coinSide = Math.floor((Math.random() * 2) + 1);
+
+		switch (coinSide) {
+			case 1:
+				results = haggisBotPath + "quarter-coin-head.jpg";
+				break;
+			case 2:
+				results = haggisBotPath + "half-dollar-coin-tail.jpg";
+		}
+
+
+		return results;
+	}
+
+//###ADD MUSIC###
+	function addMusic(link, name) {
+		var autoplaylistContent = fs.readFileSync(autoplaylist, encoding = 'utf8');
+		var autoplaylistArray = autoplaylistContent.split("\r\n");
+		var musicBlacklistContent = fs.readFileSync(musicBlacklist, encoding = 'utf8');
+		var musicBlacklistArray = musicBlacklistContent.split("\r\n");
+		var songExists = false;
+		var songBlacklisted = false;
+
+		for (i = 0; i < musicBlacklistArray.length; i++) {
+			if (musicBlacklistArray[i] == link) {
+				songBlacklisted = true;
+
+				results = "Song blacklisted, fuck off";
+			}
+		}
+
+		for (i = 0; i < autoplaylistArray.length; i++) {
+			if (autoplaylistArray[i] == link) {
+				songExists = true;
+
+				results = "Song already exists";
+			}
+		}
+
+		if (songExists == false && songBlacklisted == false) {
+			fs.appendFileSync(autoplaylist, link + '\r\n', encoding = 'utf8');
+
+			results = "Song added to autoplaylist";
+
+			sendDiscordMessage(haggisDiscordID, [name + " added " + link + " to autoplay list"]);
+		}
+
+		return results;
+	}
+
+//###STEVE BUSCEMI###
+	function steveBuscemi() {
+		var steveFolder = haggisBotPath + "steveBuscemi/";
+		var files = fs.readdirSync(steveFolder);
+
+		fileList = [];
+
+		for (var i in files) {
+			if (!files.hasOwnProperty(i)) continue;
+			var name = steveFolder + '/' + files[i];
+			if (!fs.statSync(name).isDirectory()) {
+				fileList.push(name);
+			}
+		}
+
+		var imageID = Math.floor((Math.random() * fileList.length) + 1);
+		return fileList[imageID];
+	}
+
+//###ADAM###
+	function adamClick() {
+		var adamFolder = haggisBotPath + "adamClick/";
+		var files = fs.readdirSync(adamFolder);
+
+		fileList = [];
+
+		for (var i in files) {
+			if (!files.hasOwnProperty(i)) continue;
+			var name = adamFolder + '/' + files[i];
+			if (!fs.statSync(name).isDirectory()) {
+				fileList.push(name);
+			}
+		}
+
+		var imageID = Math.floor((Math.random() * fileList.length) + 1);
+		return fileList[imageID];
+	}
+
+//###QUINNLAN###
+	function qubeyPitts() {
+		var qFolder = haggisBotPath + "Quinnlan/";
+		var files = fs.readdirSync(qFolder);
+
+		fileList = [];
+
+		for (var i in files) {
+			if (!files.hasOwnProperty(i)) continue;
+			var name = qFolder + '/' + files[i];
+			if (!fs.statSync(name).isDirectory()) {
+				fileList.push(name);
+			}
+		}
+
+		var imageID = Math.floor((Math.random() * fileList.length) + 1);
+		return fileList[imageID];
+	}
+
+//###DICKBUTT###
+	function richardKiester() {
+		var dickbuttFolder = haggisBotPath + "DickButt/";
+		var files = fs.readdirSync(dickbuttFolder);
+
+		fileList = [];
+
+		for (var i in files) {
+			if (!files.hasOwnProperty(i)) continue;
+			var name = dickbuttFolder + '/' + files[i];
+			if (!fs.statSync(name).isDirectory()) {
+				fileList.push(name);
+			}
+		}
+
+		var imageID = Math.floor((Math.random() * fileList.length) + 1);
+		return fileList[imageID];
+	}
+
+//###DEUS VULT###
+	function deusVult() {
+		var deusVult = haggisBotPath + "deusVult/";
+		var files = fs.readdirSync(deusVult);
+
+		fileList = [];
+
+		for (var i in files) {
+			if (!files.hasOwnProperty(i)) continue;
+			var name = deusVult + '/' + files[i];
+			if (!fs.statSync(name).isDirectory()) {
+				fileList.push(name);
+			}
+		}
+
+		var imageID = Math.floor((Math.random() * fileList.length) + 1);
+		return fileList[imageID];
+	}
+
+	/**
+	 * LINKBOT STUFF
+	 */
+	function searchForGame(forThis, callback) {
+		var resultsArr = [];
+		var gameList = localList.applist.apps;
+
+		for (var i = 0; i < gameList.length; i++) {
+			if (gameList[i].name.toUpperCase().indexOf(forThis.toUpperCase()) > -1) {
+				resultsArr.push(gameList[i]);
+			}
+		}
+
+		resultsArr.sort(function (a, b) {
+			if (a.name.length < b.name.length) {
+				return -1;
+			} else if (a.name.length > b.name.length) {
+				return 1;
+			} else {
+				return 0;
+			}
+		});
+
+		if (resultsArr.length > 0) {
+			callback(resultsArr[0]);
+		}
+	}
+
+	function testForURL(message, callback) {
+		var exURL;
+		var extra;
+
+		// if (message.startsWith("!linkme ")) {
+		// 	var inputTitle = message.substring(message.indexOf("!linkme ") + 8, message.length);
+
+		// 	updateList(function () {
+		// 		searchForGame(inputTitle, function (resultObj) {
+		// 			message = "http://store.steampowered.com/app/" + resultObj.appid;
+		// 			extra = message;
+		// 		});
+		// 	});
+		// }
+
+		if (message.indexOf('http') > -1) {
+			message.indexOf(" ", message.indexOf("http")) === -1 ? exURL = message.substring(message.indexOf("http"), message.length) : exURL = message.substring(message.indexOf("http"), message.indexOf(" ", message.indexOf("http")));
+			if (exURL.indexOf("://i.imgur.com/") > -1) exURL = exURL.substring(0, exURL.length - 4).replace("i.imgur.com", "imgur.com");
+
+			callback(exURL, extra);
+		}
+	}
+
+	function visitURL(URL, callback) {
+		var streamArr = [];
+		var maxSize = 10 * 1024 * 1024;
+		var rt;
+
+		var req = request(URL, function (err, res, body) {
+			if (!err && res.statusCode == 200) {
+				if (body) {
+					try {
+						var streamerInfo = JSON.parse(body);
 						rt = true;
-						callback(false, title);
+						callback(true, null, streamerInfo);
+					} catch (e) {
+						if (body.indexOf('<title>') == -1) {
+						} else {
+							var title = he.decode(body.substring(body.indexOf('<title>') + 7, body.indexOf('</title>'))).trim();
+							rt = true;
+							callback(false, title);
+						}
 					}
 				}
 			}
-		}
-	}).on('data', function (chunk) {
-		streamArr += chunk;
-		if (streamArr.length > maxSize) {
-			// logError(getDateTime(), "error The request was larger than " + maxSize);
-			req.abort();
-		}
-		if (!rt) {
-			rt = setTimeout(function () {
-				// logError(getDateTime(), "error Took over 2.5 seconds to parse page.");
+		}).on('data', function (chunk) {
+			streamArr += chunk;
+			if (streamArr.length > maxSize) {
+				// logError(getDateTime(), "error The request was larger than " + maxSize);
 				req.abort();
-			}, 2500);
-		}
-	});
-}
+			}
+			if (!rt) {
+				rt = setTimeout(function () {
+					// logError(getDateTime(), "error Took over 2.5 seconds to parse page.");
+					req.abort();
+				}, 2500);
+			}
+		});
+	}
