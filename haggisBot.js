@@ -38,6 +38,7 @@ var he = require('he');
 var haggisBotPath = discordProperties.haggisBotPath;
 var musicBotPath = discordProperties.musicBotPath;
 // var haggisBotPath = 'D:\\Projects\\WebstormProjects\\haggisBotJS\\';
+
 //Discord Information
 var haggisDiscordID = discordProperties.haggisID;
 var botfartDiscordID = discordProperties.botfartID;
@@ -52,6 +53,7 @@ var pcmrLogRequests = discordProperties.pcmrLogRequests;
 var testingBooth = discordProperties.testingBooth;
 var autoplaylist = discordProperties.autoplaylist;
 var musicBlacklist = discordProperties.musicBlacklist;
+
 //Steam Information
 var steamProfile = steamProperties.profile;
 var pcmrSteamGroup = steamProperties.pcmrGroup;
@@ -236,54 +238,11 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 			case "!fliparealcoin":
 				sendFiles(channelID, [flipARealCoin()]);
 				break;
-			case "kill":
-				if (messageArray[1] === "yourself") {
-				} else {
-					break;
-				}
-			case "kys":
-			case "killyourself":
-				sendDiscordMessage(channelID, ["https://youtu.be/2dbR2JZmlWo"]);
-				break;
-			case "!dickbutt":
-				sendFiles(channelID, [richardKiester()]);
-				break;
-			case "slammin":
-			case "SLAMMIN":
-				sendDiscordMessage(channelID, ["https://youtu.be/kencI_SLNxw"]);
-				break;
 			case "wow!":
 				sendFiles(channelID, [haggisBotPath + "wow.gif"]);
 				break;
-			case "!faggot":
-				sendFiles(channelID, [qubeyPitts()]);
-				break;
-			case "9/11":
-				sendDiscordMessage(channelID, ["Did you know Steve Buscemi was a volunteer firefighter at 9/11?"]);
-				sendFiles(channelID, [steveBuscemi()]);
-				break;
 			case "y":
 				sendFiles(channelID, [haggisBotPath + "ytho.jpg"]);
-				break;
-			case "!superreallyincrediblysecretcommands":
-				sendDiscordMessage(channelID, ["```\n" +
-				"kys \n" +
-				"kill yourself \n" +
-				"killyourself \n" +
-				"!lenny \n" +
-				"!fliparealcoin \n" +
-				"!realcoinflip \n" +
-				"!dickbutt \n" +
-				"slammin \n" +
-				"SLAMMIN \n" +
-				"me irl \n" +
-				"meirl \n" +
-				"me_irl \n" +
-				"wow! \n" +
-				"!faggot \n" +
-				"9/11 \n" +
-				"y \n" +
-				"```"])
 				break;
 		}
 
@@ -367,7 +326,7 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 			var lmaoString = "lmao";
 
 			if (ysInMessage > 100) {
-				return (sendDiscordMessage(channelID, ["lmaoooo-fuck you"]));
+				return (sendDiscordMessage(channelID, ["no"]));
 			}
 
 			for (i = 0; i < ysInMessage; i++) {
@@ -620,11 +579,12 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 			}
 		}
 
+		//Roulette stats
 		if (/^!getStats$/i.test(message)) {
 			chatGamesDB.find({_id: userID}, function (err, docs) {
 				if (docs.length > 0) {
 					sendSteamMessage(serverID, user
-						+ ": Survived - " + docs[0].rouletteSurvived
+						+ ": Lived - " + docs[0].rouletteSurvived
 						+ ", Lost - " + docs[0].rouletteLost
 						+ ", Streak - " + docs[0].rouletteStreak
 						+ ", Highest Streak - " + docs[0].rouletteTopStreak
@@ -640,7 +600,7 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 			sendSteamMessage(serverID, steamFriends.personaStates[currUserIDs[randUserNum]].player_name)
 		}
 
-		//Russian Roulette
+		//Roulette
 		if (/^!rr$/i.test(message)) {
 			if (!isUserPlaying(userID)) {
 				addChatGames(userID, user);
@@ -1198,7 +1158,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 	//Kick
 	if (/^!k$/i.test(messageArray[0])) {
 		if (modStatus(userID))
-			return sendSteamMessage(modUserID, "Fuck you stahp it");
+			return sendSteamMessage(modUserID, "Stahp it");
 
 		var strikes;
 		usersDB.find({_id: userID}, function (err, docs) {
@@ -1221,7 +1181,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 	//Joke kick
 	if (/^!jk$/i.test(messageArray[0])) {
 		if (modStatus(userID))
-			return sendSteamMessage(modUserID, "Fuck you stahp it");
+			return sendSteamMessage(modUserID, "Stahp it");
 
 		return steamFriends.kick(serverID, userID)
 	}
@@ -1258,7 +1218,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 			return;
 
 		if (modStatus(userID))
-			return sendSteamMessage(modUserID, "Fuck you stahp it");
+			return sendSteamMessage(modUserID, "Stahp it");
 
 		usersDB.update({_id: userID},
 			{
@@ -1286,7 +1246,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 		userID = messageArray[1];
 
 		if (modStatus(userID))
-			return sendSteamMessage(modUserID, "Fuck you stahp it");
+			return sendSteamMessage(modUserID, "Stahp it");
 
 		usersDB.find({_id: userID}, function (err, docs) {
 			if (docs.length > 0) {
@@ -1704,7 +1664,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 			if (musicBlacklistArray[i] == link) {
 				songBlacklisted = true;
 
-				results = "Song blacklisted, fuck off";
+				results = "Song blacklisted";
 			}
 		}
 
@@ -1727,81 +1687,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 		return results;
 	}
 
-//###STEVE BUSCEMI###
-	function steveBuscemi() {
-		var steveFolder = haggisBotPath + "steveBuscemi/";
-		var files = fs.readdirSync(steveFolder);
 
-		fileList = [];
-
-		for (var i in files) {
-			if (!files.hasOwnProperty(i)) continue;
-			var name = steveFolder + '/' + files[i];
-			if (!fs.statSync(name).isDirectory()) {
-				fileList.push(name);
-			}
-		}
-
-		var imageID = Math.floor((Math.random() * fileList.length) + 1);
-		return fileList[imageID];
-	}
-
-//###ADAM###
-	function adamClick() {
-		var adamFolder = haggisBotPath + "adamClick/";
-		var files = fs.readdirSync(adamFolder);
-
-		fileList = [];
-
-		for (var i in files) {
-			if (!files.hasOwnProperty(i)) continue;
-			var name = adamFolder + '/' + files[i];
-			if (!fs.statSync(name).isDirectory()) {
-				fileList.push(name);
-			}
-		}
-
-		var imageID = Math.floor((Math.random() * fileList.length) + 1);
-		return fileList[imageID];
-	}
-
-//###QUINNLAN###
-	function qubeyPitts() {
-		var qFolder = haggisBotPath + "Quinnlan/";
-		var files = fs.readdirSync(qFolder);
-
-		fileList = [];
-
-		for (var i in files) {
-			if (!files.hasOwnProperty(i)) continue;
-			var name = qFolder + '/' + files[i];
-			if (!fs.statSync(name).isDirectory()) {
-				fileList.push(name);
-			}
-		}
-
-		var imageID = Math.floor((Math.random() * fileList.length) + 1);
-		return fileList[imageID];
-	}
-
-//###DICKBUTT###
-	function richardKiester() {
-		var dickbuttFolder = haggisBotPath + "DickButt/";
-		var files = fs.readdirSync(dickbuttFolder);
-
-		fileList = [];
-
-		for (var i in files) {
-			if (!files.hasOwnProperty(i)) continue;
-			var name = dickbuttFolder + '/' + files[i];
-			if (!fs.statSync(name).isDirectory()) {
-				fileList.push(name);
-			}
-		}
-
-		var imageID = Math.floor((Math.random() * fileList.length) + 1);
-		return fileList[imageID];
-	}
 
 //###DEUS VULT###
 	function deusVult() {
@@ -1824,6 +1710,8 @@ function steamModCommands(modUserID, messageArray, serverID) {
 
 	/**
 	 * LINKBOT STUFF
+	 * This is code that Izy521 gave me so it's recycled from his linkbot.
+	 * But I had to fix a few things, like blank Imgur links and such.
 	 */
 	function searchForGame(forThis, callback) {
 		var resultsArr = [];
@@ -1854,6 +1742,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 		var exURL;
 		var extra;
 
+		//For linking of Steam Games, but I don't have the full list of Steam games.
 		// if (message.startsWith("!linkme ")) {
 		// 	var inputTitle = message.substring(message.indexOf("!linkme ") + 8, message.length);
 
