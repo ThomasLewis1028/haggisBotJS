@@ -129,6 +129,21 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 				}
 			}
 
+			for(i = 0; i < messageArray.length; i++){
+				if (/<:(.*?):(.*?)>/i.test(messageArray[i])) {
+					var temp = messageArray[i].split(":");
+					messageArray[i] = ":" + temp[1] + ":";
+				}
+
+				if (/@(.*?)/i.test(messageArray[i]))
+					messageArray[i] = "<pinged user>";
+			}
+
+			message = "";
+			for(i = 0; i < messageArray.length; i++)
+				message += messageArray[i] + " "
+
+
 			if (message.length < 500) {
 				if (fileLink) {
 					return sendSteamMessage(pcmrSteamGroup, "[" + user + "]: " + message + "\n"
