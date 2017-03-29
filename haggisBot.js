@@ -135,8 +135,11 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 					messageArray[i] = ":" + temp[1] + ":";
 				}
 
-				if (/@(.*?)/i.test(messageArray[i]))
-					messageArray[i] = "<pinged user>";
+				if (/@(.*?)/i.test(messageArray[i])) {
+					var temp = messageArray[i].split("@");
+					var temp2 = temp[1].split(">");
+					messageArray[i] = "@"+bot.users[temp2[0]].username;
+				}
 			}
 
 			message = "";
