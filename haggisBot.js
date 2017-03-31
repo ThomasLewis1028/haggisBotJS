@@ -138,7 +138,11 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 				if (/@(.*?)/i.test(messageArray[i])) {
 					var temp = messageArray[i].split("@");
 					var temp2 = temp[1].split(">");
-					messageArray[i] = "@"+bot.users[temp2[0]].username;
+					try {
+						messageArray[i] = "@" + bot.users[temp2[0]].username;
+					} catch (err){
+						messageArray[i] = "@" + temp2[0];
+					}
 				}
 			}
 
