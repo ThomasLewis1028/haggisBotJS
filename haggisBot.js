@@ -2,7 +2,7 @@ var steamProperties = require('./steamBotProperties.json');
 var discordProperties = require('./haggisBotProperties.json');
 
 var Discord = require('discord.io');
-var bot = new Discord.Client({
+var discordBot = new Discord.Client({
 	token: discordProperties.token,
 	autorun: true
 });
@@ -66,12 +66,12 @@ var lastRoulette = 0;
 var rouletteRound = Math.floor((Math.random() * 6));
 
 //Ready the Discord Bot
-bot.on("ready", function (rawEvent) {
+discordBot.on("ready", function (rawEvent) {
 	try {
 		console.log("Connected!");
 		console.log("Logged in as: ");
-		console.log(bot.username + " - (" + bot.id + ")");
-		console.log(bot.internals.version);
+		console.log(discordBot.username + " - (" + discordBot.id + ")");
+		console.log(discordBot.internals.version);
 		console.log("----------");
 		sendDiscordMessage(haggisDiscordID, ["DiscordBot Reconnected at " + getDateTime()]);
 	} catch (err) {
@@ -94,13 +94,13 @@ steamClient.on('logOnResponse', function (logonResp) {
 });
 
 //###DO ON DISCORD MESSAGE###
-bot.on("message", function (user, userID, channelID, message, rawEvent) {
+discordBot.on("message", function (user, userID, channelID, message, rawEvent) {
 	try {
-		if (channelID in bot.directMessages) {
+		if (channelID in discordBot.directMessages) {
 			//do nothing, no idea how to not have this here
 		} else {
-			var serverID = bot.channels[channelID].guild_id;
-			var server = bot.servers[serverID];
+			var serverID = discordBot.channels[channelID].guild_id;
+			var server = discordBot.servers[serverID];
 		}
 
 		var messageArray = message.split(" ");
@@ -121,7 +121,7 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 			lastSteamUserId = botfartDiscordID;
 			logSteamChat(channelID, userID, user, getDateTime(), message);
 
-			if (/^!(jk|k|ka|krand|b|bid|ubid|ub|cs)$/i.test(messageArray[0])) {
+			if (/^!(jk|k|ka|krand|b|bid|ubid|ub|cs|lc|uc)$/i.test(messageArray[0])) {
 				for (i = 0; i < modIDs.length; i++) {
 					if (userID == modIDs[i]["discordModID"]) {
 						steamModCommands(modIDs[i]["steamModID"], messageArray, pcmrSteamGroup);
@@ -129,7 +129,7 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 				}
 			}
 
-			for(i = 0; i < messageArray.length; i++){
+			for (i = 0; i < messageArray.length; i++) {
 				if (/<:(.*?):(.*?)>/i.test(messageArray[i])) {
 					var temp = messageArray[i].split(":");
 					messageArray[i] = ":" + temp[1] + ":";
@@ -139,15 +139,15 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 					var temp = messageArray[i].split("@");
 					var temp2 = temp[1].split(">");
 					try {
-						messageArray[i] = "@" + bot.users[temp2[0]].username;
-					} catch (err){
+						messageArray[i] = "@" + discordBot.users[temp2[0]].username;
+					} catch (err) {
 						messageArray[i] = "@" + temp2[0];
 					}
 				}
 			}
 
 			message = "";
-			for(i = 0; i < messageArray.length; i++)
+			for (i = 0; i < messageArray.length; i++)
 				message += messageArray[i] + " "
 
 
@@ -159,7 +159,7 @@ bot.on("message", function (user, userID, channelID, message, rawEvent) {
 					return sendSteamMessage(pcmrSteamGroup, "[" + user + "]: " + message);
 				}
 			} else if (message.length >= 500) {
-				// bot.deleteMessage({messageID, channelID});
+				// discordBot.deleteMessage({messageID, channelID});
 				return sendDiscordMessage(channelID, ["Please do not send more than 500 Characters"]);
 			}
 		}
@@ -771,7 +771,7 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 		}
 
 		//Steam mod call
-		if (/^!(jk|k|ka|krand|b|bid|ubid|ub|cs)$/i.test(messageArray[0])) {
+		if (/^!(jk|k|ka|krand|b|bid|ubid|ub|cs|lc|uc)$/i.test(messageArray[0])) {
 			if (isMod)
 				steamModCommands(userID, messageArray, serverID);
 			else
@@ -845,7 +845,7 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 
 /**#########################################################
  * Discord related functions
- * Functions directly related to/used by the discord portion of the bot
+ * Functions directly related to/used by the discord portion of the discordBot
  #########################################################**/
 
 //###SEND DISCORD MESSAGE###
@@ -857,7 +857,7 @@ function sendDiscordMessage(ID, messageArr, interval) {
 	function _sendMessages() {
 		setTimeout(function () {
 			if (messageArr[0]) {
-				bot.sendMessage({
+				discordBot.sendMessage({
 					to: ID,
 					message: messageArr.shift()
 				}, function (err, res) {
@@ -885,7 +885,7 @@ function sendFiles(channelID, fileArr, interval) {
 	function _sendFiles() {
 		setTimeout(function () {
 			if (fileArr[0]) {
-				bot.uploadFile({
+				discordBot.uploadFile({
 					to: channelID,
 					file: fileArr.shift()
 				}, function (err, res) {
@@ -933,12 +933,12 @@ function discordModCommands(user, messageArray, channelID) {
 		userToActUpon = /\d+/.exec(messageArray[1]);
 
 		if (messageArray[0] == "!k") {
-			bot.kick({
+			discordBot.kick({
 				channel: channelID,
 				target: userToActUpon
 			})
 		} else if (messageArray[0] == "!b") {
-			bot.ban({
+			discordBot.ban({
 				channel: channelID,
 				target: userToActUpon
 			})
@@ -947,17 +947,17 @@ function discordModCommands(user, messageArray, channelID) {
 }
 
 //###AUTO RECONNECT###
-bot.on('disconnect', function (message, code) {
+discordBot.on('disconnect', function (message, code) {
 	if (code === 0) {
 		sendDiscordMessage(haggisDiscordID, message);
 		return logError(getDateTime(), message);
 	}
-	bot.connect(); //Auto reconnect
+	discordBot.connect(); //Auto reconnect
 });
 
 /**#########################################################
  * Steam related functions
- * Functions used directly by the steam portion of the bot
+ * Functions used directly by the steam portion of the discordBot
  #########################################################**/
 
 //###DO ON USER STATE CHANGE###
@@ -1139,7 +1139,7 @@ steamFriends.on('friendMsg', function (userID, message, type) {
 		if (type == 2 || type == 6) {
 			return;
 		} else if (modStatus(userID)) {
-			if (/^!(jk|k|ka|krand|b|bid|ubid|ub|cs)$/i.test(messageArray[0])) {
+			if (/^!(jk|k|ka|krand|b|bid|ubid|ub|cs|lc|uc)$/i.test(messageArray[0])) {
 				steamModCommands(userID, messageArray, pcmrSteamGroup);
 
 			}
@@ -1152,6 +1152,44 @@ steamFriends.on('friendMsg', function (userID, message, type) {
 		sendDiscordMessage(haggisDiscordID, [err]);
 	}
 });
+
+steamFriends.on('chatRoomInfo', function (chatID, chatInfo, flag, userID) {
+	try {
+		console.log(flag);
+		switch (flag) {
+			case 3:
+
+				sendDiscordMessage(pcmrDiscordRelay, ["```The chat set to all-users by "
+				+ steamFriends.personaStates[userID].player_name + "```"]);
+
+				discordBot.editRole({
+					serverID: pcmrDiscordRelay,
+					roleID: pcmrDiscordRelay,
+					permissions: {
+						TEXT_SEND_MESSAGES: true
+					}
+				});
+				break;
+			case 7:
+
+				sendDiscordMessage(pcmrDiscordRelay, ["```The chat set to officers only by "
+				+ steamFriends.personaStates[userID].player_name + "```"]);
+
+				discordBot.editRole({
+					serverID: pcmrDiscordRelay,
+					roleID: pcmrDiscordRelay,
+					permissions: {
+						TEXT_SEND_MESSAGES: false
+					}
+				});
+				break;
+		}
+	} catch (err) {
+		logError(getDateTime(), err + "6");
+		sendDiscordMessage(haggisDiscordID, err);
+	}
+});
+
 
 //###STEAM MOD COMMANDS###
 function steamModCommands(modUserID, messageArray, serverID) {
@@ -1263,7 +1301,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 		return steamFriends.ban(serverID, userID);
 	}
 
-//Ban by ID
+	//Ban by ID
 	if (/^!bid$/i.test(messageArray[0]) && /^\d{17}$/i.test(messageArray[1])) {
 		userID = messageArray[1];
 
@@ -1304,7 +1342,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 		return steamFriends.ban(serverID, userID);
 	}
 
-//Unban by name
+	//Unban by name
 	if (/^!ub$/i.test(messageArray[0])) {
 		var ubRegEx = RegExp(messageArray[1], "i");
 
@@ -1337,7 +1375,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 
 	}
 
-//Unban by ID
+	//Unban by ID
 	if (/^!ubid$/i.test(messageArray[0])) {
 		userID = messageArray[1];
 
@@ -1373,7 +1411,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 		});
 	}
 
-//Clear strikes
+	//Clear strikes
 	if (/^!cs$/i.test(messageArray[0])) {
 		usersDB.update({_id: userID},
 			{
@@ -1384,439 +1422,446 @@ function steamModCommands(modUserID, messageArray, serverID) {
 				usersDB.persistence.compactDatafile()
 			});
 	}
+
+	//Lock Chat
+	if (/^!lc$/i.test(messageArray[0]))
+		steamFriends.setModerated(pcmrSteamGroup);
+
+	//Unlock Chat
+	if (/^!uc$/i.test(messageArray[0]))
+		steamFriends.setUnmoderated(pcmrSteamGroup);
 }
 
 
 //###AUTO RECONNECT###
-	steamClient.on('disconnect', function () {
-		{
-			steamClient.connect();
-			steamClient.on('connected', function () {
-				steamUser.logOn({
-					account_name: steamProperties.username,
-					password: steamProperties.password
-				});
+steamClient.on('disconnect', function () {
+	{
+		steamClient.connect();
+		steamClient.on('connected', function () {
+			steamUser.logOn({
+				account_name: steamProperties.username,
+				password: steamProperties.password
 			});
-		}
-	});
+		});
+	}
+});
 
 //###IS MOD###
-	function modStatus(userID) {
-		for (i = 0; i < modIDs.length; i++) {
-			if (userID == modIDs[i]["steamModID"]) {
-				return true;
-			}
+function modStatus(userID) {
+	for (i = 0; i < modIDs.length; i++) {
+		if (userID == modIDs[i]["steamModID"]) {
+			return true;
 		}
-		return false;
 	}
+	return false;
+}
 
-	/**#########################################################
-	 * Shared functions
-	 * functions used by both discord and steam
-	 #########################################################**/
+/**#########################################################
+ * Shared functions
+ * functions used by both discord and steam
+ #########################################################**/
 
 //###GET DATE AND TIME###
-	function getDateTime() {
-		var date = new Date();
+function getDateTime() {
+	var date = new Date();
 
-		var year = date.getFullYear();
+	var year = date.getFullYear();
 
-		var month = date.getMonth() + 1;
-		month = (month < 10 ? "0" : "") + month;
+	var month = date.getMonth() + 1;
+	month = (month < 10 ? "0" : "") + month;
 
-		var day = date.getDate();
-		day = (day < 10 ? "0" : "") + day;
+	var day = date.getDate();
+	day = (day < 10 ? "0" : "") + day;
 
-		var hour = date.getHours();
-		hour = (hour < 10 ? "0" : "") + hour;
+	var hour = date.getHours();
+	hour = (hour < 10 ? "0" : "") + hour;
 
-		var min = date.getMinutes();
-		min = (min < 10 ? "0" : "") + min;
+	var min = date.getMinutes();
+	min = (min < 10 ? "0" : "") + min;
 
-		var sec = date.getSeconds();
-		sec = (sec < 10 ? "0" : "") + sec;
+	var sec = date.getSeconds();
+	sec = (sec < 10 ? "0" : "") + sec;
 
 
-		return day + "-" + month + "-" + year + ": " + hour + ":" + min + ":" + sec;
-	}
+	return day + "-" + month + "-" + year + ": " + hour + ":" + min + ":" + sec;
+}
 
 //###LOG ERROR###
-	function logError(time, err) {
-		var date = new Date();
-		var yyyy = date.getFullYear();
-		var mm = date.getMonth() + 1;
-		mm = (mm < 10 ? "0" : "") + mm;
-		var dd = date.getDate();
-		dd = (dd < 10 ? "0" : "") + dd;
+function logError(time, err) {
+	var date = new Date();
+	var yyyy = date.getFullYear();
+	var mm = date.getMonth() + 1;
+	mm = (mm < 10 ? "0" : "") + mm;
+	var dd = date.getDate();
+	dd = (dd < 10 ? "0" : "") + dd;
 
-		var path = haggisBotPath + "logs/";
-		var fileName = yyyy + "-" + mm + "-" + dd + "-ERROR.txt";
+	var path = haggisBotPath + "logs/";
+	var fileName = yyyy + "-" + mm + "-" + dd + "-ERROR.txt";
 
-		var logContent = yyyy + "-" + mm + "-" + dd + "-" + time + "\r\n"
-			+ err + "\r\n"
-			+ "----------\r\n";
+	var logContent = yyyy + "-" + mm + "-" + dd + "-" + time + "\r\n"
+		+ err + "\r\n"
+		+ "----------\r\n";
 
-		fs.appendFileSync(path + fileName, logContent, encoding = "utf8");
-	}
+	fs.appendFileSync(path + fileName, logContent, encoding = "utf8");
+}
 
-	/**#########################################################
-	 * Joke and fun related functions
-	 * Most of this stuff is for my personal discord server
-	 #########################################################**/
+/**#########################################################
+ * Joke and fun related functions
+ * Most of this stuff is for my personal discord server
+ #########################################################**/
 
 //Is user listed
-	function isUserListed(userID) {
-		(usersDB.find({_id: userID}, function (err, docs) {
-			return docs.length > 0;
-		}));
-	}
+function isUserListed(userID) {
+	(usersDB.find({_id: userID}, function (err, docs) {
+		return docs.length > 0;
+	}));
+}
 
-	function addUser(userID, user) {
-		var doc = {
-			_id: userID,
-			name: user,
-			lastMsgTime: null,
-			lastMsg: null,
-			last5Msgs: [null, null, null, null, null],
-			last5Times: [0, 0, 0, 0, 0],
-			lastEntrance: null,
-			lastExit: null,
-			strikes: 0,
-			banned: false,
-			bannedBy: null,
-			bannedOn: null
-		};
+function addUser(userID, user) {
+	var doc = {
+		_id: userID,
+		name: user,
+		lastMsgTime: null,
+		lastMsg: null,
+		last5Msgs: [null, null, null, null, null],
+		last5Times: [0, 0, 0, 0, 0],
+		lastEntrance: null,
+		lastExit: null,
+		strikes: 0,
+		banned: false,
+		bannedBy: null,
+		bannedOn: null
+	};
 
-		usersDB.insert(doc, function (err, newDoc) {
-		})
-	}
+	usersDB.insert(doc, function (err, newDoc) {
+	})
+}
 
-	function isUserPlaying(userID) {
-		(chatGamesDB.find({_id: userID}, function (err, docs) {
-			return docs.length > 0;
-		}));
-	}
+function isUserPlaying(userID) {
+	(chatGamesDB.find({_id: userID}, function (err, docs) {
+		return docs.length > 0;
+	}));
+}
 
-	function addChatGames(userID, user) {
-		var doc = {
-			_id: userID,
-			name: user,
-			rouletteSurvived: 0,
-			rouletteStreak: 0,
-			rouletteTopStreak: 0,
-			rouletteLost: 0,
-			lastRoulette: 0,
-			playedRound: false
-		};
+function addChatGames(userID, user) {
+	var doc = {
+		_id: userID,
+		name: user,
+		rouletteSurvived: 0,
+		rouletteStreak: 0,
+		rouletteTopStreak: 0,
+		rouletteLost: 0,
+		lastRoulette: 0,
+		playedRound: false
+	};
 
-		chatGamesDB.insert(doc, function (err, newDoc) {
-		})
-	}
+	chatGamesDB.insert(doc, function (err, newDoc) {
+	})
+}
 
-	function addPingMe(userID, user) {
-		var doc = {
-			_id: userID,
-			name: user,
-			ping: true
-		};
+function addPingMe(userID, user) {
+	var doc = {
+		_id: userID,
+		name: user,
+		ping: true
+	};
 
-		pingMe.insert(doc, function (err, newDoc) {
-		})
-	}
+	pingMe.insert(doc, function (err, newDoc) {
+	})
+}
 
-	/**#########################################################
-	 * Joke and fun related functions
-	 * Most of this stuff is for my personal discord server
-	 #########################################################**/
+/**#########################################################
+ * Joke and fun related functions
+ * Most of this stuff is for my personal discord server
+ #########################################################**/
 
 //##ROLL DICE SHADOWRUN###
-	function rollDiceSR(diceNum) {
-		var results = "```\nResults: ";
-		var successes = 0;
-		var glitches = 0;
-		var sum = 0;
-		var diceResult;
+function rollDiceSR(diceNum) {
+	var results = "```\nResults: ";
+	var successes = 0;
+	var glitches = 0;
+	var sum = 0;
+	var diceResult;
 
-		for (var i = 0; i < diceNum; i++) {
-			diceResult = Math.floor((Math.random() * 6) + 1);
-			sum += diceResult;
+	for (var i = 0; i < diceNum; i++) {
+		diceResult = Math.floor((Math.random() * 6) + 1);
+		sum += diceResult;
 
-			if (i == 0) {
-				results = results.concat("\{", diceResult.toString());
-			} else if (i != 0 && i != diceNum - 1) {
-				results = results.concat(", ", diceResult.toString());
-			} else if (i == diceNum - 1) {
-				results = results.concat(", ", diceResult.toString());
-			}
-
-			if (diceResult == 5 || diceResult == 6) {
-				successes++;
-			}
-			if (diceResult == 1) {
-				glitches++;
-			}
-
+		if (i == 0) {
+			results = results.concat("\{", diceResult.toString());
+		} else if (i != 0 && i != diceNum - 1) {
+			results = results.concat(", ", diceResult.toString());
+		} else if (i == diceNum - 1) {
+			results = results.concat(", ", diceResult.toString());
 		}
-		results = results.concat("\}");
-		results = results.concat("\n", "Successes: ", successes.toString());
-		results = results.concat("\n", "Glitches: ", glitches.toString());
-		results = results.concat("\n", "Sum: ", sum.toString());
-		results = results.concat("```");
 
-		return results;
+		if (diceResult == 5 || diceResult == 6) {
+			successes++;
+		}
+		if (diceResult == 1) {
+			glitches++;
+		}
+
 	}
+	results = results.concat("\}");
+	results = results.concat("\n", "Successes: ", successes.toString());
+	results = results.concat("\n", "Glitches: ", glitches.toString());
+	results = results.concat("\n", "Sum: ", sum.toString());
+	results = results.concat("```");
+
+	return results;
+}
 
 //###ROLL DICE SUM###
-	function rollDiceSum(diceNum, diceSide) {
-		var results = "```\nResults: ";
-		var sum = 0;
-		var diceResult = 0;
+function rollDiceSum(diceNum, diceSide) {
+	var results = "```\nResults: ";
+	var sum = 0;
+	var diceResult = 0;
 
-		for (var i = 0; i < diceNum; i++) {
-			diceResult = Math.floor((Math.random() * diceSide) + 1);
-			sum += diceResult;
+	for (var i = 0; i < diceNum; i++) {
+		diceResult = Math.floor((Math.random() * diceSide) + 1);
+		sum += diceResult;
 
-			if (i == 0) {
-				results = results.concat("\{", diceResult.toString());
-			} else if (i != 0 && i != diceNum - 1) {
-				results = results.concat(", ", diceResult.toString());
-			} else if (i == diceNum - 1) {
-				results = results.concat(", ", diceResult.toString());
-			}
+		if (i == 0) {
+			results = results.concat("\{", diceResult.toString());
+		} else if (i != 0 && i != diceNum - 1) {
+			results = results.concat(", ", diceResult.toString());
+		} else if (i == diceNum - 1) {
+			results = results.concat(", ", diceResult.toString());
 		}
-		results = results.concat("\}");
-		results = results.concat("\n", "Sum: ", sum.toString());
-		results = results.concat("```");
-
-		return results;
 	}
+	results = results.concat("\}");
+	results = results.concat("\n", "Sum: ", sum.toString());
+	results = results.concat("```");
+
+	return results;
+}
 
 //###PICK A CARD###
-	function pickACard() {
-		var results = "```\n";
-		var cardSuit = Math.floor((Math.random() * 4) + 1);
-		var cardID = Math.floor((Math.random() * 13) + 1);
+function pickACard() {
+	var results = "```\n";
+	var cardSuit = Math.floor((Math.random() * 4) + 1);
+	var cardID = Math.floor((Math.random() * 13) + 1);
 
-		switch (cardID) {
-			case 1:
-				results = results.concat("Ace");
-				break;
-			case 2:
-			case 3:
-			case 4:
-			case 5:
-			case 6:
-			case 7:
-			case 8:
-			case 9:
-			case 10:
-				results = results.concat(cardID.toString());
-				break;
-			case 11:
-				results = results.concat("Jack");
-				break;
-			case 12:
-				results = results.concat("Queen");
-				break;
-			case 13:
-				results = results.concat("King");
-		}
-		switch (cardSuit) {
-			case 1:
-				results = results.concat(" of Spades");
-				break;
-			case 2:
-				results = results.concat(" of Hearts");
-				break;
-			case 3:
-				results = results.concat(" of Clubs");
-				break;
-			case 4:
-				results = results.concat(" of Diamonds");
-		}
-		results = results.concat("```");
-
-		return results;
+	switch (cardID) {
+		case 1:
+			results = results.concat("Ace");
+			break;
+		case 2:
+		case 3:
+		case 4:
+		case 5:
+		case 6:
+		case 7:
+		case 8:
+		case 9:
+		case 10:
+			results = results.concat(cardID.toString());
+			break;
+		case 11:
+			results = results.concat("Jack");
+			break;
+		case 12:
+			results = results.concat("Queen");
+			break;
+		case 13:
+			results = results.concat("King");
 	}
+	switch (cardSuit) {
+		case 1:
+			results = results.concat(" of Spades");
+			break;
+		case 2:
+			results = results.concat(" of Hearts");
+			break;
+		case 3:
+			results = results.concat(" of Clubs");
+			break;
+		case 4:
+			results = results.concat(" of Diamonds");
+	}
+	results = results.concat("```");
+
+	return results;
+}
 
 //###FLIP A COIN###
-	function flipACoin() {
-		var results = "```\n";
-		var coinSide = Math.floor((Math.random() * 2) + 1);
+function flipACoin() {
+	var results = "```\n";
+	var coinSide = Math.floor((Math.random() * 2) + 1);
 
-		switch (coinSide) {
-			case 1:
-				results = results.concat("Heads");
-				break;
-			case 2:
-				results = results.concat("Tails");
-		}
-
-		results = results.concat("```");
-
-		return results;
+	switch (coinSide) {
+		case 1:
+			results = results.concat("Heads");
+			break;
+		case 2:
+			results = results.concat("Tails");
 	}
+
+	results = results.concat("```");
+
+	return results;
+}
 
 //###FLIP A REAL COIN###
-	function flipARealCoin() {
-		var coinSide = Math.floor((Math.random() * 2) + 1);
+function flipARealCoin() {
+	var coinSide = Math.floor((Math.random() * 2) + 1);
 
-		switch (coinSide) {
-			case 1:
-				results = haggisBotPath + "quarter-coin-head.jpg";
-				break;
-			case 2:
-				results = haggisBotPath + "half-dollar-coin-tail.jpg";
-		}
-
-
-		return results;
+	switch (coinSide) {
+		case 1:
+			results = haggisBotPath + "quarter-coin-head.jpg";
+			break;
+		case 2:
+			results = haggisBotPath + "half-dollar-coin-tail.jpg";
 	}
+
+
+	return results;
+}
 
 //###ADD MUSIC###
-	function addMusic(link, name) {
-		var autoplaylistContent = fs.readFileSync(autoplaylist, encoding = 'utf8');
-		var autoplaylistArray = autoplaylistContent.split("\r\n");
-		var musicBlacklistContent = fs.readFileSync(musicBlacklist, encoding = 'utf8');
-		var musicBlacklistArray = musicBlacklistContent.split("\r\n");
-		var songExists = false;
-		var songBlacklisted = false;
+function addMusic(link, name) {
+	var autoplaylistContent = fs.readFileSync(autoplaylist, encoding = 'utf8');
+	var autoplaylistArray = autoplaylistContent.split("\r\n");
+	var musicBlacklistContent = fs.readFileSync(musicBlacklist, encoding = 'utf8');
+	var musicBlacklistArray = musicBlacklistContent.split("\r\n");
+	var songExists = false;
+	var songBlacklisted = false;
 
-		for (i = 0; i < musicBlacklistArray.length; i++) {
-			if (musicBlacklistArray[i] == link) {
-				songBlacklisted = true;
+	for (i = 0; i < musicBlacklistArray.length; i++) {
+		if (musicBlacklistArray[i] == link) {
+			songBlacklisted = true;
 
-				results = "Song blacklisted";
-			}
+			results = "Song blacklisted";
 		}
-
-		for (i = 0; i < autoplaylistArray.length; i++) {
-			if (autoplaylistArray[i] == link) {
-				songExists = true;
-
-				results = "Song already exists";
-			}
-		}
-
-		if (songExists == false && songBlacklisted == false) {
-			fs.appendFileSync(autoplaylist, link + '\r\n', encoding = 'utf8');
-
-			results = "Song added to autoplaylist";
-
-			sendDiscordMessage(haggisDiscordID, [name + " added " + link + " to autoplay list"]);
-		}
-
-		return results;
 	}
 
+	for (i = 0; i < autoplaylistArray.length; i++) {
+		if (autoplaylistArray[i] == link) {
+			songExists = true;
+
+			results = "Song already exists";
+		}
+	}
+
+	if (songExists == false && songBlacklisted == false) {
+		fs.appendFileSync(autoplaylist, link + '\r\n', encoding = 'utf8');
+
+		results = "Song added to autoplaylist";
+
+		sendDiscordMessage(haggisDiscordID, [name + " added " + link + " to autoplay list"]);
+	}
+
+	return results;
+}
 
 
 //###DEUS VULT###
-	function deusVult() {
-		var deusVult = haggisBotPath + "deusVult/";
-		var files = fs.readdirSync(deusVult);
+function deusVult() {
+	var deusVult = haggisBotPath + "deusVult/";
+	var files = fs.readdirSync(deusVult);
 
-		fileList = [];
+	fileList = [];
 
-		for (var i in files) {
-			if (!files.hasOwnProperty(i)) continue;
-			var name = deusVult + '/' + files[i];
-			if (!fs.statSync(name).isDirectory()) {
-				fileList.push(name);
-			}
-		}
-
-		var imageID = Math.floor((Math.random() * fileList.length) + 1);
-		return fileList[imageID];
-	}
-
-	/**
-	 * LINKBOT STUFF
-	 * This is code that Izy521 gave me so it's recycled from his linkbot.
-	 * But I had to fix a few things, like blank Imgur links and such.
-	 */
-	function searchForGame(forThis, callback) {
-		var resultsArr = [];
-		var gameList = localList.applist.apps;
-
-		for (var i = 0; i < gameList.length; i++) {
-			if (gameList[i].name.toUpperCase().indexOf(forThis.toUpperCase()) > -1) {
-				resultsArr.push(gameList[i]);
-			}
-		}
-
-		resultsArr.sort(function (a, b) {
-			if (a.name.length < b.name.length) {
-				return -1;
-			} else if (a.name.length > b.name.length) {
-				return 1;
-			} else {
-				return 0;
-			}
-		});
-
-		if (resultsArr.length > 0) {
-			callback(resultsArr[0]);
+	for (var i in files) {
+		if (!files.hasOwnProperty(i)) continue;
+		var name = deusVult + '/' + files[i];
+		if (!fs.statSync(name).isDirectory()) {
+			fileList.push(name);
 		}
 	}
 
-	function testForURL(message, callback) {
-		var exURL;
-		var extra;
+	var imageID = Math.floor((Math.random() * fileList.length) + 1);
+	return fileList[imageID];
+}
 
-		//For linking of Steam Games, but I don't have the full list of Steam games.
-		// if (message.startsWith("!linkme ")) {
-		// 	var inputTitle = message.substring(message.indexOf("!linkme ") + 8, message.length);
+/**
+ * LINKBOT STUFF
+ * This is code that Izy521 gave me so it's recycled from his linkbot.
+ * But I had to fix a few things, like blank Imgur links and such.
+ */
+function searchForGame(forThis, callback) {
+	var resultsArr = [];
+	var gameList = localList.applist.apps;
 
-		// 	updateList(function () {
-		// 		searchForGame(inputTitle, function (resultObj) {
-		// 			message = "http://store.steampowered.com/app/" + resultObj.appid;
-		// 			extra = message;
-		// 		});
-		// 	});
-		// }
-
-		if (message.indexOf('http') > -1) {
-			message.indexOf(" ", message.indexOf("http")) === -1 ? exURL = message.substring(message.indexOf("http"), message.length) : exURL = message.substring(message.indexOf("http"), message.indexOf(" ", message.indexOf("http")));
-			if (exURL.indexOf("://i.imgur.com/") > -1) exURL = exURL.substring(0, exURL.length - 4).replace("i.imgur.com", "imgur.com");
-
-			callback(exURL, extra);
+	for (var i = 0; i < gameList.length; i++) {
+		if (gameList[i].name.toUpperCase().indexOf(forThis.toUpperCase()) > -1) {
+			resultsArr.push(gameList[i]);
 		}
 	}
 
-	function visitURL(URL, callback) {
-		var streamArr = [];
-		var maxSize = 10 * 1024 * 1024;
-		var rt;
+	resultsArr.sort(function (a, b) {
+		if (a.name.length < b.name.length) {
+			return -1;
+		} else if (a.name.length > b.name.length) {
+			return 1;
+		} else {
+			return 0;
+		}
+	});
 
-		var req = request(URL, function (err, res, body) {
-			if (!err && res.statusCode == 200) {
-				if (body) {
-					try {
-						var streamerInfo = JSON.parse(body);
+	if (resultsArr.length > 0) {
+		callback(resultsArr[0]);
+	}
+}
+
+function testForURL(message, callback) {
+	var exURL;
+	var extra;
+
+	//For linking of Steam Games, but I don't have the full list of Steam games.
+	// if (message.startsWith("!linkme ")) {
+	// 	var inputTitle = message.substring(message.indexOf("!linkme ") + 8, message.length);
+
+	// 	updateList(function () {
+	// 		searchForGame(inputTitle, function (resultObj) {
+	// 			message = "http://store.steampowered.com/app/" + resultObj.appid;
+	// 			extra = message;
+	// 		});
+	// 	});
+	// }
+
+	if (message.indexOf('http') > -1) {
+		message.indexOf(" ", message.indexOf("http")) === -1 ? exURL = message.substring(message.indexOf("http"), message.length) : exURL = message.substring(message.indexOf("http"), message.indexOf(" ", message.indexOf("http")));
+		if (exURL.indexOf("://i.imgur.com/") > -1) exURL = exURL.substring(0, exURL.length - 4).replace("i.imgur.com", "imgur.com");
+
+		callback(exURL, extra);
+	}
+}
+
+function visitURL(URL, callback) {
+	var streamArr = [];
+	var maxSize = 10 * 1024 * 1024;
+	var rt;
+
+	var req = request(URL, function (err, res, body) {
+		if (!err && res.statusCode == 200) {
+			if (body) {
+				try {
+					var streamerInfo = JSON.parse(body);
+					rt = true;
+					callback(true, null, streamerInfo);
+				} catch (e) {
+					if (body.indexOf('<title>') == -1) {
+					} else {
+						var title = he.decode(body.substring(body.indexOf('<title>') + 7, body.indexOf('</title>'))).trim();
 						rt = true;
-						callback(true, null, streamerInfo);
-					} catch (e) {
-						if (body.indexOf('<title>') == -1) {
-						} else {
-							var title = he.decode(body.substring(body.indexOf('<title>') + 7, body.indexOf('</title>'))).trim();
-							rt = true;
-							callback(false, title);
-						}
+						callback(false, title);
 					}
 				}
 			}
-		}).on('data', function (chunk) {
-			streamArr += chunk;
-			if (streamArr.length > maxSize) {
-				// logError(getDateTime(), "error The request was larger than " + maxSize);
+		}
+	}).on('data', function (chunk) {
+		streamArr += chunk;
+		if (streamArr.length > maxSize) {
+			// logError(getDateTime(), "error The request was larger than " + maxSize);
+			req.abort();
+		}
+		if (!rt) {
+			rt = setTimeout(function () {
+				// logError(getDateTime(), "error Took over 2.5 seconds to parse page.");
 				req.abort();
-			}
-			if (!rt) {
-				rt = setTimeout(function () {
-					// logError(getDateTime(), "error Took over 2.5 seconds to parse page.");
-					req.abort();
-				}, 2500);
-			}
-		});
-	}
+			}, 2500);
+		}
+	});
+}
