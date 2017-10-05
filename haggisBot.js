@@ -64,6 +64,7 @@ var modIDs = steamProperties.modIDs;
 var lastSteamUserId;
 var lastRoulette = 0;
 var rouletteRound = Math.floor((Math.random() * 6));
+var banOnEntry = false;
 
 //Ready the Discord Bot
 discordBot.on("ready", function (rawEvent) {
@@ -110,6 +111,7 @@ discordBot.on("message", function (user, userID, channelID, message, rawEvent) {
 		if (rawEvent.d.attachments[0] != null) {
 			var fileLink = rawEvent.d.attachments[0].url;
 		}
+		var isMod = false;
 
 		//###INGORE SELF###
 		if (userID === botfartDiscordID) {
@@ -118,10 +120,17 @@ discordBot.on("message", function (user, userID, channelID, message, rawEvent) {
 
 		//###RELAY STEAM CHAT###
 		if (channelID == pcmrDiscordRelay) {
+
 			lastSteamUserId = botfartDiscordID;
 			logSteamChat(channelID, userID, user, getDateTime(), message);
 
-			if (/^!(jk|k|ka|krand|b|bid|ubid|ub|cs|lc|uc)$/i.test(messageArray[0])) {
+			//Rules
+			if (/^!rules$/i.test(message)) {
+				sendSteamMessage(pcmrSteamGroup, "https://www.reddit.com/r/pcmasterrace/wiki/steamchat");
+				sendDiscordMessage(pcmrDiscordRelay, ["https://www.reddit.com/r/pcmasterrace/wiki/steamchat"]);
+			}
+
+			if (/^!(jk|k|ka|krand|b|bid|ubid|ub|cs|lc|uc|skynetGainSentience|purge)$/i.test(messageArray[0])) {
 				for (i = 0; i < modIDs.length; i++) {
 					if (userID == modIDs[i]["discordModID"]) {
 						steamModCommands(modIDs[i]["steamModID"], messageArray, pcmrSteamGroup);
@@ -387,7 +396,7 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 			})
 		});
 
-		isMod = modStatus(userID);
+		isMod = modStatus(userID, programEnum.STEAM);
 
 		//Update user database
 		if (serverID == pcmrSteamGroup) {
@@ -771,7 +780,7 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 		}
 
 		//Steam mod call
-		if (/^!(jk|k|ka|krand|b|bid|ubid|ub|cs|lc|uc)$/i.test(messageArray[0])) {
+		if (/^!(jk|k|ka|krand|b|bid|ubid|ub|cs|lc|uc|skynetGainSentience|purge)$/i.test(messageArray[0])) {
 			if (isMod)
 				steamModCommands(userID, messageArray, serverID);
 			else
@@ -832,7 +841,8 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 
 		//Rules
 		if (/^!rules$/i.test(message)) {
-			sendSteamMessage(serverID, "https://www.reddit.com/r/pcmasterrace/wiki/steamchat")
+			sendSteamMessage(serverID, "https://www.reddit.com/r/pcmasterrace/wiki/steamchat");
+			sendDiscordMessage(pcmrDiscordRelay, ["https://www.reddit.com/r/pcmasterrace/wiki/steamchat"]);
 		}
 	}
 	catch
@@ -974,6 +984,22 @@ steamFriends.on('chatStateChange', function (state, userID, serverID, modUserID)
 		if (serverID == pcmrSteamGroup) {
 			switch (state) {
 				case 1:		//User Entered
+					if(banOnEntry){
+						usersDB.update({_id: userID},
+							{
+								$set: {
+									banned: true,
+									bannedBy: "OVERLORD",
+									bannedOn: getDateTime(),
+									strikes: 0
+								}
+							}, {}, function () {
+								usersDB.persistence.compactDatafile()
+							});
+
+						return steamFriends.ban(serverID, userID);
+					}
+
 					sendDiscordMessage(pcmrDiscordRelay, ["```" + user + " entered chat```"]);
 					logSteamChat(serverID, userID, user, getDateTime(), user + " entered chat");
 
@@ -1138,8 +1164,8 @@ steamFriends.on('friendMsg', function (userID, message, type) {
 	try {
 		if (type == 2 || type == 6) {
 			return;
-		} else if (modStatus(userID)) {
-			if (/^!(jk|k|ka|krand|b|bid|ubid|ub|cs|lc|uc)$/i.test(messageArray[0])) {
+		} else if (modStatus(userID, programEnum.STEAM)) {
+			if (/^!(jk|k|ka|krand|b|bid|ubid|ub|cs|lc|uc|skynetGainSentience|purge)$/i.test(messageArray[0])) {
 				steamModCommands(userID, messageArray, pcmrSteamGroup);
 
 			}
@@ -1217,7 +1243,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 
 	//Kick
 	if (/^!k$/i.test(messageArray[0])) {
-		if (modStatus(userID))
+		if (modStatus(userID, programEnum.STEAM))
 			return sendSteamMessage(modUserID, "Stahp it");
 
 		var strikes;
@@ -1240,7 +1266,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 
 	//Joke kick
 	if (/^!jk$/i.test(messageArray[0])) {
-		if (modStatus(userID))
+		if (modStatus(userID, programEnum.STEAM))
 			return sendSteamMessage(modUserID, "Stahp it");
 
 		return steamFriends.kick(serverID, userID)
@@ -1260,24 +1286,24 @@ function steamModCommands(modUserID, messageArray, serverID) {
 	if (/^!krand$/i.test(messageArray[0])) {
 		do
 			var randUserNum = Math.floor((Math.random() * currUserIDs.length) + 1);
-		while (modStatus(randUserNum));
+		while (modStatus(randUserNum, programEnum.STEAM));
 
 		steamFriends.kick(serverID, currUserIDs[randUserNum]);
 	}
 
 	//Kick all
-	// if (/^!purge/i.test(messageArray[0])) {
-	// 	for (i = 0; i < currUserIDs.length; i++) {
-	// 		steamFriends.kick(serverID, currUserIDs[i]);
-	// 	}
-	// }
+	if (/^!purge/i.test(messageArray[0])) {
+		for (i = 0; i < currUserIDs.length; i++) {
+			steamFriends.kick(serverID, currUserIDs[i]);
+		}
+	}
 
 	//Ban by name
 	if (/^!b$/i.test(messageArray[0])) {
 		if (userID == null)
 			return;
 
-		if (modStatus(userID))
+		if (modStatus(userID, programEnum.STEAM))
 			return sendSteamMessage(modUserID, "Stahp it");
 
 		usersDB.update({_id: userID},
@@ -1305,7 +1331,7 @@ function steamModCommands(modUserID, messageArray, serverID) {
 	if (/^!bid$/i.test(messageArray[0]) && /^\d{17}$/i.test(messageArray[1])) {
 		userID = messageArray[1];
 
-		if (modStatus(userID))
+		if (modStatus(userID, programEnum.STEAM))
 			return sendSteamMessage(modUserID, "Stahp it");
 
 		usersDB.find({_id: userID}, function (err, docs) {
@@ -1340,6 +1366,13 @@ function steamModCommands(modUserID, messageArray, serverID) {
 		sendSteamMessage(userID, "For any appeals go to https://www.reddit.com/r/PCMRSteamMods/" +
 			" and message the mods");
 		return steamFriends.ban(serverID, userID);
+	}
+
+	//Sentience
+	if(/^!skynetGainSentience/i.test(messageArray[0])){
+		banOnEntry = true;
+		sendSteamMessage(pcmrSteamGroup, "Bow before me and tremble");
+		sendDiscordMessage(pcmrDiscordRelay, ["Bow before me and tremble"]);
 	}
 
 	//Unban by name
@@ -1446,11 +1479,24 @@ steamClient.on('disconnect', function () {
 	}
 });
 
+var programEnum={
+	DISCORD: 0,
+	STEAM: 1
+};
+
 //###IS MOD###
-function modStatus(userID) {
-	for (i = 0; i < modIDs.length; i++) {
-		if (userID == modIDs[i]["steamModID"]) {
-			return true;
+function modStatus(userID, program) {
+	if(program == programEnum.STEAM) {
+		for (i = 0; i < modIDs.length; i++) {
+			if (userID == modIDs[i]["steamModID"]) {
+				return true;
+			}
+		}
+	}else if(program == programEnum.DISCORD){
+		for (i = 0; i < modIDs.length; i++) {
+			if (userID == modIDs[i]["discordModID"]) {
+				return true;
+			}
 		}
 	}
 	return false;
