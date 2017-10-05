@@ -517,47 +517,29 @@ steamFriends.on('chatMsg', function (serverID, message, type, userID) {
 
 			//Kick or ban if more than 500 characters is sent
 			if (message.length > 500) {
-				var strikes;
 				usersDB.find({_id: userID}, function (err, docs) {
-					strikes = docs[0].strikes;
+					sendSteamMessage(userID, "You were banned for sending more than 500" +
+						" characters.");
+					sendSteamMessage(userID, "For any appeals go to https://www.reddit.com/r/PCMRSteamMods/" +
+						" and message the mods");
+					steamFriends.ban(serverID, userID);
+					usersDB.update({_id: userID},
+						{
+							$set: {
+								banned: true,
+								strikes: 0,
+								bannedBy: "Botfart",
+								bannedOn: getDateTime()
+							}
+						}, {}, function () {
+							usersDB.persistence.compactDatafile()
+						});
 
-					if (strikes < 3) {
-						strikes++;
-						steamFriends.kick(serverID, userID);
-						sendSteamMessage(userID, "Please don't send more than 500 characters.");
-						sendSteamMessage(userID, "You have " + strikes + " strikes");
-
-						usersDB.update({_id: userID},
-							{
-								$set: {
-									strikes: strikes
-								}
-							}, {}, function () {
-								usersDB.persistence.compactDatafile()
-							})
-					} else {
-						sendSteamMessage(userID, "You were banned for sending more than 500" +
-							" characters and received " + strikes + " strikes already");
-						sendSteamMessage(userID, "For any appeals go to https://www.reddit.com/r/PCMRSteamMods/" +
-							" and message the mods");
-						steamFriends.ban(serverID, userID);
-						usersDB.update({_id: userID},
-							{
-								$set: {
-									banned: true,
-									strikes: 0,
-									bannedBy: "Botfart",
-									bannedOn: getDateTime()
-								}
-							}, {}, function () {
-								usersDB.persistence.compactDatafile()
-							});
-
-						for (i = 0; i < modIDs.length; i++) {
-							sendSteamMessage(modIDs[i]["steamModID"],
-								user + "(" + userID + ") was banned for sending more than 500 characters");
-						}
+					for (i = 0; i < modIDs.length; i++) {
+						sendSteamMessage(modIDs[i]["steamModID"],
+							user + "(" + userID + ") was banned for sending more than 500 characters");
 					}
+
 				});
 			}
 
