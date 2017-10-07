@@ -21,8 +21,10 @@ var haggisBotPath = discordProperties.haggisBotPath;
 var haggisID = discordProperties.haggisID;
 var botfartDiscordID = discordProperties.botfartID;
 var resistanceServer = discordProperties.resistanceServer;
+var resistanceGames = discordProperties.resistanceGames;
 
-var rouletteRound = 5;
+var rouletteRound = Math.floor((Math.random() * 6));
+var lastRoulette = 0;
 
 discordBot.on("ready", function (rawEvent) {
 	try {
@@ -33,14 +35,18 @@ discordBot.on("ready", function (rawEvent) {
 });
 
 discordBot.on("message", function (user, userID, channelID, message, rawEvent) {
-	if (/^!rr$/i.test(message))
-		roulettePlay(channelID, userID, user);
+	if (channelID == resistanceGames) {
+		if (/^!rr$/i.test(message))
+			roulettePlay(channelID, userID, user);
 
-	if (/^!rrlead$/i.test(message))
-		rouletteGetLead(channelID);
+		if (/^!rrlead$/i.test(message))
+			rouletteGetLead(channelID);
 
-	if (/^!rrstats$/i.test(message)) {
-		rouletteGetStats(channelID, userID)
+		if (/^!rrstats$/i.test(message))
+			rouletteGetStats(channelID, userID);
+
+		// if (/^!rrspin$/i.test(message))
+		// 	rouletteSpin(channelID, userID);
 	}
 });
 
@@ -56,7 +62,7 @@ function roulettePlay(channelID, userID, user) {
 		var played = docs[0].played;
 
 		if (played == true)
-			sendDiscordMessage(channelID, ["<" + userID + ">: You have already played this round"])
+			sendDiscordMessage(channelID, ["<@" + userID + ">: You have already played this round"])
 		else {
 			if (rouletteRound > 0) {
 				streak++;
@@ -65,12 +71,13 @@ function roulettePlay(channelID, userID, user) {
 					topStreak++;
 				played = true;
 
-				sendDiscordMessage(channelID, ["<" + userID + "> *click* :gun:"])
+				sendDiscordMessage(channelID, ["<@" + userID + "> *click* :gun:"])
 			} else if (rouletteRound == 0) {
 				streak = 0;
 				lost++;
-				played = false
-				sendDiscordMessage(channelID, ["<" + userID + "> *bang* :gun:"])
+				played = false;
+				rouletteRound = Math.floor((Math.random() * 6));
+				sendDiscordMessage(channelID, ["<@" + userID + "> *bang* :gun:"])
 			}
 
 			rouletteDB.update({_id: userID},
@@ -81,7 +88,7 @@ function roulettePlay(channelID, userID, user) {
 						topStreak: topStreak,
 						survived: survived,
 						last: Date.now(),
-						played: true
+						played: played
 					}
 				}, {}, function () {
 					rouletteDB.persistence.compactDatafile()
@@ -92,11 +99,11 @@ function roulettePlay(channelID, userID, user) {
 }
 
 function rouletteGetLead(channelID) {
-	var highCurrStreak,
+	var highCurrStreak = 0,
 		highCurrUser,
-		mostWins,
+		mostWins = 0,
 		mostWinsUser,
-		mostLoss,
+		mostLoss = 0,
 		mostLossUser;
 
 	rouletteDB.find({}, function (err, docs) {
@@ -115,48 +122,84 @@ function rouletteGetLead(channelID) {
 				mostLoss = docs[i].lost;
 				mostLossUser = docs[i].name;
 			}
-
-			discordBot.sendMessage({
-				to: channelID,
-				embed: {
-					title: "Roulette Leaderboard",
-					color: 0xFF0000,
-					fields: [
-						{name: "Highest Streak", value: highCurrUser + " - " + highCurrStreak},
-						{name: "Most Survived", value: mostWinsUser + " - " + mostWins},
-						{name: "Most Lost", value: mostLossUser + " - " + mostLoss}
-					]
-				}
-			});
 		}
+
+		discordBot.sendMessage({
+			to: channelID,
+			embed: {
+				title: "Roulette Leaderboard",
+				color: 0xFF0000,
+				fields: [
+					{name: "Highest Streak", value: highCurrUser + " - " + highCurrStreak},
+					{name: "Most Survived", value: mostWinsUser + " - " + mostWins},
+					{name: "Most Lost", value: mostLossUser + " - " + mostLoss}
+				]
+			}
+		});
 	})
 }
 
 function rouletteGetStats(channelID, userID) {
+	var survived = 0,
+		lost = 0,
+		streak = 0,
+		topStreak = 0,
+		ratio = 0;
+
 	rouletteDB.find({_id: userID}, function (err, docs) {
 		if (docs.length > 0) {
-			var survived, lost, streak, topStreak, ratio;
 			survived = docs[0].survived;
 			lost = docs[0].lost;
 			streak = docs[0].streak;
 			topStreak = docs[0].topStreak;
-			ratio = survived / lost.toFixed(2);
+
+			if (lost == 0)
+				ratio = survived;
+			else
+				ratio = (survived / lost).toFixed(2);
+
+
 			discordBot.sendMessage({
 				to: channelID,
 				embed: {
-					title: "Roulette Stats",
+					title: docs[0].name + " Roulette Stats",
 					color: 0xFF0000,
 					fields: [
-						{name: "Lived", value: docs[0].survived},
-						{name: "Lost", value: docs[0].lost},
-						{name: "Streak", value: docs[0].streak},
-						{name: "Top Streak", value: docs[0].topStreak},
-						{name: "Ratio", value: docs[0].survived / docs[0].lost.toFixed(2)}
+						{name: "Won", value: survived, inline: true},
+						{name: "Lost", value: lost, inline: true},
+						{name: "Streak", value: streak, inline: true},
+						{name: "Top Streak", value: topStreak, inline: true}
+
 					]
 				}
 			});
 		}
 	})
+
+
+}
+
+function rouletteSpin(channelID, userID) {
+	if (((Date.now() - lastRoulette) > 900000)) {
+		rouletteDB.find({_id: userID}, function (err, docs) {
+			if (docs[0].played == false)
+				sendDiscordMessage(channelID, ["Please play before spinning the barrel."]);
+			else {
+				rouletteRound = Math.floor((Math.random() * 6));
+
+				rouletteDB.update({played: true},
+					{
+						$set: {
+							playedRound: false
+						}
+					}, {multi: true}, function () {
+						rouletteDB.persistence.compactDatafile()
+					});
+
+				sendDiscordMessage(channelID, ["*Spinning*"]);
+			}
+		})
+	}
 }
 
 //###SEND DISCORD MESSAGE###

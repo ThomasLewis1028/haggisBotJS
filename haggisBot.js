@@ -53,6 +53,7 @@ var pcmrLogRequests = discordProperties.pcmrLogRequests;
 var testingBooth = discordProperties.testingBooth;
 var autoplaylist = discordProperties.autoplaylist;
 var musicBlacklist = discordProperties.musicBlacklist;
+var resistanceServer = discordProperties.resistanceServer;
 
 //Steam Information
 var steamProfile = steamProperties.profile;
@@ -114,7 +115,7 @@ discordBot.on("message", function (user, userID, channelID, message, rawEvent) {
 		var isMod = false;
 
 		//###INGORE SELF###
-		if (userID === botfartDiscordID) {
+		if (userID === botfartDiscordID || serverID == resistanceServer) {
 			return;
 		}
 
@@ -214,7 +215,7 @@ discordBot.on("message", function (user, userID, channelID, message, rawEvent) {
 		}
 
 		//###DO IN CERTAIN SERVERS###
-		if (serverID == pcmrDiscordServer || serverID == pcmrDiscordRelay) {
+		if (serverID == pcmrDiscordServer || serverID == pcmrDiscordRelay || serverID == resistanceServer) {
 			return;
 		}
 
