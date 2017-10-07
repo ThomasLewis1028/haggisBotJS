@@ -62,7 +62,7 @@ function roulettePlay(channelID, userID, user) {
 		var played = docs[0].played;
 
 		if (played == true)
-			sendDiscordMessage(channelID, ["<@" + userID + ">: You have already played this round"])
+			sendDiscordMessage(channelID, ["<@" + userID + ">: You have already played this round"]);
 		else {
 			if (rouletteRound > 0) {
 				streak++;
@@ -70,14 +70,14 @@ function roulettePlay(channelID, userID, user) {
 				if (streak > topStreak)
 					topStreak++;
 				played = true;
-
-				sendDiscordMessage(channelID, ["<@" + userID + "> *click* :gun:"])
+				rouletteRound--;
+				sendDiscordMessage(channelID, ["<@" + userID + "> *click* :gun:"]);
 			} else if (rouletteRound == 0) {
 				streak = 0;
 				lost++;
 				played = false;
 				rouletteRound = Math.floor((Math.random() * 6));
-				sendDiscordMessage(channelID, ["<@" + userID + "> *bang* :gun:"])
+				sendDiscordMessage(channelID, ["<@" + userID + "> *bang* :gun:"]);
 			}
 
 			rouletteDB.update({_id: userID},
